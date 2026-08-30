@@ -1,0 +1,2161 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+    <title>Saldo Previsionale - Spese Ricorrenti</title>
+    <style>
+        /* Reset e base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+
+        body {
+            background: #f4f7fc;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .app-container {
+            max-width: 950px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* Card */
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 20px 24px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+            transition: 0.2s;
+        }
+
+        .card.highlight {
+            background: linear-gradient(135deg, #0b2b4a 0%, #1a4a7a 100%);
+            color: white;
+        }
+
+        h1 {
+            font-size: 1.9rem;
+            font-weight: 600;
+            color: #0b2b4a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #5e6f8d;
+            font-size: 0.95rem;
+            margin-bottom: 18px;
+            border-left: 4px solid #3b82f6;
+            padding-left: 14px;
+        }
+
+        .subtitle-white {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.95rem;
+            margin-bottom: 18px;
+            border-left: 4px solid #6ee7b7;
+            padding-left: 14px;
+        }
+
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: #1e3a5f;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .h2-white {
+            color: white;
+        }
+
+        /* Form */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px 18px;
+        }
+
+        .form-grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 14px 18px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: #2c3e5a;
+            letter-spacing: 0.3px;
+        }
+
+        .label-white {
+            color: rgba(255,255,255,0.8);
+        }
+
+        input, select, button {
+            padding: 12px 14px;
+            border: 1.5px solid #dce3ef;
+            border-radius: 16px;
+            font-size: 1rem;
+            background: white;
+            transition: 0.2s;
+            width: 100%;
+        }
+
+        .input-white {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.3);
+            color: white;
+        }
+
+        .input-white:focus {
+            border-color: #6ee7b7;
+            background: rgba(255,255,255,0.25);
+        }
+
+        .input-white::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+
+        input:focus, select:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        }
+
+        .btn {
+            background: #3b82f6;
+            color: white;
+            font-weight: 600;
+            border: none;
+            padding: 14px 18px;
+            border-radius: 60px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .btn:hover {
+            background: #2563eb;
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background: #e8edf5;
+            color: #1e3a5f;
+        }
+
+        .btn-secondary:hover {
+            background: #d5deec;
+        }
+
+        .btn-danger {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .btn-danger:hover {
+            background: #fecaca;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-outline-white {
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .btn-outline-white:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: white;
+        }
+
+        .btn-small {
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            width: auto;
+            border-radius: 40px;
+        }
+
+        .btn-edit {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-edit:hover {
+            background: #fde68a;
+        }
+
+        .btn-save-edit {
+            background: #10b981;
+            color: white;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-save-edit:hover {
+            background: #059669;
+        }
+
+        .btn-cancel-edit {
+            background: #e5e7eb;
+            color: #374151;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-cancel-edit:hover {
+            background: #d1d5db;
+        }
+
+        .row-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        /* Rate section */
+        .rate-section {
+            background: #f8faff;
+            border-radius: 20px;
+            padding: 16px 18px;
+            margin-top: 14px;
+            border: 1px solid #e4ecf7;
+        }
+
+        .rate-config {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .rate-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .rate-row input {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .rate-row .btn-small {
+            flex-shrink: 0;
+        }
+
+        .rate-list {
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .rate-item {
+            background: white;
+            padding: 10px 14px;
+            border-radius: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #dce3ef;
+            font-size: 0.95rem;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .rate-item .rate-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+
+        .rate-item .rate-info .badge {
+            background: #3b82f6;
+            color: white;
+            padding: 2px 14px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .rate-item .rate-info .badge.last {
+            background: #10b981;
+        }
+
+        .rate-item .rate-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .rate-item .edit-input {
+            padding: 4px 8px;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            width: 120px;
+        }
+
+        .rate-item .edit-date-input {
+            padding: 4px 8px;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            width: 140px;
+        }
+
+        .rate-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #dce3ef;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .rate-summary .remaining {
+            font-weight: 600;
+            color: #0b2b4a;
+        }
+
+        .rate-summary .remaining.negative {
+            color: #dc2626;
+        }
+
+        .rate-summary .remaining.zero {
+            color: #10b981;
+        }
+
+        /* Ricorrenti section */
+        .recurring-section {
+            background: #f0fdf4;
+            border-radius: 20px;
+            padding: 16px 18px;
+            margin-top: 14px;
+            border: 1px solid #bbf7d0;
+        }
+
+        .recurring-section .flag-group {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .recurring-section .flag-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .recurring-section .flag-group input[type="checkbox"] {
+            width: auto;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        /* Tabella movimenti */
+        .table-wrapper {
+            overflow-x: auto;
+            margin-top: 8px;
+            border-radius: 20px;
+            border: 1px solid #e4ecf7;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+            min-width: 500px;
+        }
+
+        th {
+            background: #f0f5fe;
+            text-align: left;
+            padding: 14px 12px;
+            color: #1e3a5f;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ecf1f8;
+            vertical-align: middle;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: #e4ecf7;
+            color: #1e3a5f;
+        }
+
+        .tag.income { background: #d1fae5; color: #065f46; }
+        .tag.expense { background: #fee2e2; color: #991b1b; }
+        .tag.installment { background: #fef3c7; color: #92400e; }
+        .tag.recurring { background: #dbeafe; color: #1e40af; }
+
+        .delete-btn {
+            background: transparent;
+            border: none;
+            color: #b91c1c;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 40px;
+        }
+
+        .delete-btn:hover {
+            background: #fee2e2;
+        }
+
+        /* Saldo preview */
+        .saldo-box {
+            background: #0b2b4a;
+            color: white;
+            border-radius: 20px;
+            padding: 18px 24px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .saldo-box .label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .saldo-box .amount {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .saldo-box .amount.positive { color: #6ee7b7; }
+        .saldo-box .amount.negative { color: #fca5a5; }
+        .saldo-box .amount.zero { color: #94a3b8; }
+
+        .saldo-attuale-box {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            border-radius: 20px;
+            padding: 20px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .saldo-attuale-box .label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .saldo-attuale-box .amount {
+            font-size: 2.2rem;
+            font-weight: 700;
+        }
+
+        .saldo-attuale-box .sub-info {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideUp 0.3s ease;
+            max-width: 90%;
+        }
+
+        .toast.error {
+            background: #ef4444;
+        }
+
+        .toast.warning {
+            background: #f59e0b;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .sync-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 14px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .sync-status.online {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .sync-status.offline {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .sync-status.syncing {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .recurring-preview {
+            font-size: 0.85rem;
+            color: #065f46;
+            background: #d1fae5;
+            padding: 8px 14px;
+            border-radius: 12px;
+            margin-top: 8px;
+        }
+
+        .recurring-preview .highlight {
+            font-weight: 600;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .form-grid, .form-grid-3 {
+                grid-template-columns: 1fr;
+            }
+            .rate-config {
+                grid-template-columns: 1fr;
+            }
+            .card { padding: 16px; }
+            .rate-row { flex-direction: column; align-items: stretch; }
+            .row-buttons { justify-content: stretch; }
+            .row-buttons .btn-small { width: 100%; }
+            .saldo-attuale-box { flex-direction: column; align-items: stretch; text-align: center; }
+            .rate-item { flex-direction: column; align-items: stretch; }
+            .rate-item .rate-info { flex-direction: column; align-items: stretch; }
+            .rate-item .rate-actions { justify-content: center; }
+            .header-actions { flex-direction: column; align-items: stretch; }
+            .recurring-section .flag-group { flex-direction: column; align-items: stretch; }
+        }
+
+        @media (min-width: 768px) {
+            .app-container { padding: 0 10px; }
+        }
+
+        .empty {
+            text-align: center;
+            color: #6b7f9e;
+            padding: 30px 0;
+            font-style: italic;
+        }
+
+        .mt-2 { margin-top: 12px; }
+        .mt-1 { margin-top: 8px; }
+        .mb-1 { margin-bottom: 8px; }
+        .flex { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .gap-1 { gap: 6px; }
+        .text-muted { color: #6b7f9e; font-size: 0.85rem; }
+        .text-center { text-align: center; }
+        .text-success { color: #10b981; }
+        .text-danger { color: #dc2626; }
+        .text-white { color: white; }
+        .text-white-80 { color: rgba(255,255,255,0.8); }
+        .text-xs { font-size: 0.75rem; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <h1>💰 Saldo Previsionale</h1>
+                <div class="subtitle">Gestisci entrate, spese, rate e movimenti ricorrenti</div>
+            </div>
+            <div class="header-actions">
+                <span id="syncStatus" class="sync-status offline">⚪ Connessione...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- SALDO INIZIALE E SALDO ATTUALE -->
+    <div class="card highlight">
+        <div class="form-grid-3">
+            <div class="form-group">
+                <label class="label-white">💰 Saldo iniziale (€)</label>
+                <input type="number" id="initialBalance" step="0.01" value="1000.00" class="input-white" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label class="label-white">📅 Data saldo iniziale</label>
+                <input type="date" id="initialBalanceDate" value="2026-01-01" class="input-white">
+            </div>
+            <div class="form-group" style="justify-content: flex-end;">
+                <button class="btn btn-outline-white btn-small" id="updateBalanceBtn" style="margin-top: 0;">🔄 Aggiorna saldo</button>
+            </div>
+        </div>
+        
+        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.2);">
+            <div class="saldo-attuale-box" style="background: rgba(255,255,255,0.1);">
+                <div>
+                    <div class="label">💳 SALDO ATTUALE (al <span id="currentDateLabel">oggi</span>)</div>
+                    <div class="sub-info">Calcolato da <span id="initialDateLabel">01/01/2026</span> a oggi</div>
+                </div>
+                <div>
+                    <div class="amount" id="currentBalanceDisplay">0,00 €</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data target per previsione -->
+    <div class="card">
+        <div class="form-grid">
+            <div class="form-group">
+                <label>📅 Data target (calcolo saldo futuro)</label>
+                <input type="date" id="targetDate" value="2026-12-31">
+            </div>
+            <div class="form-group" style="justify-content: flex-end;">
+                <button class="btn" id="calculateBtn">🔄 Calcola saldo previsionale</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inserimento movimento -->
+    <div class="card">
+        <h2>➕ Nuovo movimento</h2>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Tipo</label>
+                <select id="transactionType">
+                    <option value="income">Entrata</option>
+                    <option value="expense" selected>Spesa (intero)</option>
+                    <option value="installment">Spesa a rate</option>
+                    <option value="recurring-expense">Spesa ricorrente</option>
+                    <option value="recurring-income">Entrata ricorrente</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Descrizione</label>
+                <input type="text" id="desc" placeholder="es. Affitto, Stipendio..." value="">
+            </div>
+            <div class="form-group">
+                <label>Importo (€)</label>
+                <input type="number" id="amount" step="0.01" placeholder="0.00" value="">
+            </div>
+            <div class="form-group">
+                <label>Data</label>
+                <input type="date" id="transactionDate" value="">
+            </div>
+        </div>
+
+        <!-- Sezione rate (visibile solo per spesa a rate) -->
+        <div id="rateSection" class="rate-section" style="display: none;">
+            <div style="font-weight: 500; margin-bottom: 12px;">📅 Configurazione rate</div>
+            
+            <div class="rate-config">
+                <div class="form-group">
+                    <label>Numero rate totali</label>
+                    <input type="number" id="totalRates" min="2" value="3">
+                </div>
+                <div class="form-group">
+                    <label>Importo rata standard (€)</label>
+                    <input type="number" id="standardRateAmount" step="0.01" placeholder="auto" value="">
+                </div>
+            </div>
+
+            <div class="rate-row">
+                <input type="number" id="rateAmount" step="0.01" placeholder="Importo rata" value="">
+                <input type="date" id="rateDate" value="">
+                <button class="btn btn-secondary btn-small" id="addRateBtn">+ Aggiungi rata</button>
+                <button class="btn btn-success btn-small" id="autoGenerateBtn">⚡ Genera automatiche</button>
+            </div>
+
+            <div id="rateListContainer" class="rate-list">
+                <!-- Le rate vengono inserite qui dinamicamente -->
+            </div>
+
+            <div class="rate-summary">
+                <span>Totale rate: <strong id="totalRatesAmount">0.00</strong> €</span>
+                <span class="remaining">Rimanente: <strong id="remainingAmount">0.00</strong> €</span>
+            </div>
+        </div>
+
+        <!-- Sezione ricorrente (visibile solo per spesa/entrata ricorrente) -->
+        <div id="recurringSection" class="recurring-section" style="display: none;">
+            <div style="font-weight: 500; margin-bottom: 12px;">🔄 Configurazione movimento ricorrente</div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Numero mesi di ripetizione</label>
+                    <input type="number" id="recurringMonths" min="1" value="12" placeholder="es. 12">
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <div class="flag-group">
+                        <label>
+                            <input type="checkbox" id="recurringLastDay">
+                            <span>📅 Sempre l'ultimo giorno del mese</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="recurringPreview" class="recurring-preview" style="display: none;">
+                <span>🔄 Verranno generati <span class="highlight" id="previewCount">0</span> movimenti:</span>
+                <span id="previewDates"></span>
+            </div>
+        </div>
+
+        <div class="row-buttons mt-2">
+            <button class="btn" id="addTransactionBtn">➕ Aggiungi movimento</button>
+            <button class="btn btn-secondary btn-small" id="clearRatesBtn" style="display: none;">🗑️ Cancella rate</button>
+        </div>
+    </div>
+
+    <!-- Lista movimenti -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <h2>📋 Movimenti</h2>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-secondary btn-small" id="exportDataBtn">📤 Esporta</button>
+                <button class="btn btn-secondary btn-small" id="importDataBtn">📥 Importa</button>
+                <button class="btn btn-danger btn-small" id="clearAllBtn">🗑️ Cancella tutto</button>
+            </div>
+        </div>
+        <input type="file" id="fileInput" accept=".json" style="display:none;">
+        <div id="movementsList">
+            <div class="empty">Nessun movimento inserito</div>
+        </div>
+    </div>
+
+    <!-- Risultato saldo previsionale -->
+    <div class="card" id="resultCard">
+        <div class="saldo-box">
+            <span><span class="label">📊 Saldo previsto al</span><br> <span id="resultDateLabel">—</span></span>
+            <span class="amount" id="resultAmount">0.00 €</span>
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: space-between;">
+            <span>💰 Entrate totali: <strong id="totalIncomes">0.00</strong> €</span>
+            <span>💸 Spese totali: <strong id="totalExpenses">0.00</strong> €</span>
+            <span>📈 Saldo stimato: <strong id="estimatedBalance">0.00</strong> €</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // CARICAMENTO SUPABASE DINAMICO
+    // ============================================================
+    (function() {
+        "use strict";
+
+       // 🔑 SOSTITUISCI CON I TUOI DATI!
+        const SUPABASE_URL = 'https://yewyoqmnfiiksansupcg.supabase.co';     
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlld3lvcW1uZmlpa3NhbnN1cGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDQ2NTUsImV4cCI6MjEwMzYyMDY1NX0.NVQfsk6MaaKXq7K6rxp7_H0JzKnwfbZdA1fRcPQX_yQ';
+
+        // ============================================================
+        // CARICA SUPABASE SCRIPT DINAMICAMENTE
+        // ============================================================
+        function loadSupabase() {
+            return new Promise((resolve, reject) => {
+                if (window.supabase) {
+                    resolve(window.supabase);
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+                script.onload = function() {
+                    if (window.supabase) {
+                        resolve(window.supabase);
+                    } else {
+                        reject(new Error('Supabase non trovato'));
+                    }
+                };
+                script.onerror = function() {
+                    reject(new Error('Errore caricamento Supabase'));
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        // ============================================================
+        // AVVIA L'APP
+        // ============================================================
+        async function startApp() {
+            try {
+                await loadSupabase();
+                console.log('✅ Supabase caricato');
+                await initApp();
+            } catch (error) {
+                console.error('❌ Errore Supabase:', error);
+                showToast('⚠️ Modalità offline - dati solo locali', false, true);
+                await initAppOffline();
+            }
+        }
+
+        // ============================================================
+        // INIZIALIZZA APP (con Supabase)
+        // ============================================================
+        async function initApp() {
+            const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+            // ============================================================
+            // STATO
+            // ============================================================
+            let transactions = [];
+            let tempRates = [];
+            let lastRateAmount = null;
+            let editingIndex = null;
+            let deviceId = null;
+            let isSyncing = false;
+
+            // ============================================================
+            // DOM ELEMENTI
+            // ============================================================
+            const initialBalanceInput = document.getElementById('initialBalance');
+            const initialBalanceDateInput = document.getElementById('initialBalanceDate');
+            const updateBalanceBtn = document.getElementById('updateBalanceBtn');
+            const currentBalanceDisplay = document.getElementById('currentBalanceDisplay');
+            const currentDateLabel = document.getElementById('currentDateLabel');
+            const initialDateLabel = document.getElementById('initialDateLabel');
+
+            const targetDateInput = document.getElementById('targetDate');
+            const transactionType = document.getElementById('transactionType');
+            const descInput = document.getElementById('desc');
+            const amountInput = document.getElementById('amount');
+            const transactionDate = document.getElementById('transactionDate');
+            const rateSection = document.getElementById('rateSection');
+            const recurringSection = document.getElementById('recurringSection');
+            const totalRatesInput = document.getElementById('totalRates');
+            const standardRateAmount = document.getElementById('standardRateAmount');
+            const rateAmount = document.getElementById('rateAmount');
+            const rateDate = document.getElementById('rateDate');
+            const addRateBtn = document.getElementById('addRateBtn');
+            const autoGenerateBtn = document.getElementById('autoGenerateBtn');
+            const rateListContainer = document.getElementById('rateListContainer');
+            const totalRatesAmount = document.getElementById('totalRatesAmount');
+            const remainingAmount = document.getElementById('remainingAmount');
+            const clearRatesBtn = document.getElementById('clearRatesBtn');
+            const addTransactionBtn = document.getElementById('addTransactionBtn');
+            const movementsList = document.getElementById('movementsList');
+            const clearAllBtn = document.getElementById('clearAllBtn');
+            const exportDataBtn = document.getElementById('exportDataBtn');
+            const importDataBtn = document.getElementById('importDataBtn');
+            const fileInput = document.getElementById('fileInput');
+            const calculateBtn = document.getElementById('calculateBtn');
+            const resultDateLabel = document.getElementById('resultDateLabel');
+            const resultAmount = document.getElementById('resultAmount');
+            const totalIncomes = document.getElementById('totalIncomes');
+            const totalExpenses = document.getElementById('totalExpenses');
+            const estimatedBalance = document.getElementById('estimatedBalance');
+            const syncStatus = document.getElementById('syncStatus');
+
+            // Elementi ricorrenti
+            const recurringMonths = document.getElementById('recurringMonths');
+            const recurringLastDay = document.getElementById('recurringLastDay');
+            const recurringPreview = document.getElementById('recurringPreview');
+            const previewCount = document.getElementById('previewCount');
+            const previewDates = document.getElementById('previewDates');
+
+            // ============================================================
+            // UTILITY
+            // ============================================================
+            function formatDate(dateStr) {
+                if (!dateStr) return '—';
+                const parts = dateStr.split('-');
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+
+            function formatDateShort(dateStr) {
+                if (!dateStr) return '—';
+                const parts = dateStr.split('-');
+                return `${parts[2]}/${parts[1]}`;
+            }
+
+            function formatCurrency(val) {
+                return val.toFixed(2).replace('.', ',') + ' €';
+            }
+
+            function generateId() { return Date.now() + '_' + Math.random().toString(36).substr(2, 6); }
+
+            function addMonthsKeepingDay(dateStr, months) {
+                const parts = dateStr.split('-');
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const day = parseInt(parts[2], 10);
+                
+                const d = new Date(year, month + months, day);
+                
+                if (d.getDate() !== day) {
+                    d.setDate(0);
+                }
+                
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${dd}`;
+            }
+
+            function addMonthsLastDay(dateStr, months) {
+                const parts = dateStr.split('-');
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                
+                const d = new Date(year, month + months + 1, 0);
+                
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${dd}`;
+            }
+
+            function roundToCents(val) {
+                return Math.round(val * 100) / 100;
+            }
+
+            function getToday() {
+                const d = new Date();
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            }
+
+            function getTodayFormatted() {
+                const d = new Date();
+                return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            }
+
+            function showToast(message, isError = false, isWarning = false) {
+                const existing = document.querySelector('.toast');
+                if (existing) existing.remove();
+                
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                if (isError) toast.classList.add('error');
+                if (isWarning) toast.classList.add('warning');
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transition = 'opacity 0.3s';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+
+            function updateSyncStatus(status, message) {
+                syncStatus.className = 'sync-status ' + status;
+                const icons = { online: '🟢', offline: '🔴', syncing: '🔄' };
+                syncStatus.textContent = (icons[status] || '⚪') + ' ' + (message || status);
+            }
+
+            // ============================================================
+            // GENERAZIONE RICORRENZE
+            // ============================================================
+            function generateRecurringDates() {
+                const startDate = transactionDate.value;
+                const months = parseInt(recurringMonths.value) || 0;
+                const useLastDay = recurringLastDay.checked;
+
+                if (!startDate || months < 1) {
+                    recurringPreview.style.display = 'none';
+                    return [];
+                }
+
+                const dates = [];
+                for (let i = 0; i < months; i++) {
+                    let date;
+                    if (useLastDay) {
+                        date = addMonthsLastDay(startDate, i);
+                    } else {
+                        date = addMonthsKeepingDay(startDate, i);
+                    }
+                    dates.push(date);
+                }
+
+                // Mostra anteprima
+                recurringPreview.style.display = 'block';
+                previewCount.textContent = dates.length;
+                
+                let previewText = '';
+                const maxShow = 5;
+                for (let i = 0; i < Math.min(dates.length, maxShow); i++) {
+                    if (i > 0) previewText += ', ';
+                    previewText += formatDateShort(dates[i]);
+                }
+                if (dates.length > maxShow) {
+                    previewText += ` +${dates.length - maxShow} altre`;
+                }
+                previewDates.textContent = previewText;
+
+                return dates;
+            }
+
+            // ============================================================
+            // DEVICE ID
+            // ============================================================
+            function getDeviceId() {
+                let id = localStorage.getItem('finance_device_id');
+                if (!id) {
+                    id = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem('finance_device_id', id);
+                }
+                return id;
+            }
+
+            // ============================================================
+            // DATABASE OPERATIONS (SUPABASE - ANONIMO)
+            // ============================================================
+            async function saveToCloud() {
+                if (isSyncing) return;
+                if (!supabaseClient) return;
+                
+                try {
+                    isSyncing = true;
+                    updateSyncStatus('syncing', 'Salvataggio...');
+                    
+                    const data = {
+                        device_id: deviceId,
+                        transactions: transactions,
+                        initial_balance: parseFloat(initialBalanceInput.value) || 0,
+                        initial_balance_date: initialBalanceDateInput.value,
+                        target_date: targetDateInput.value,
+                        updated_at: new Date().toISOString()
+                    };
+
+                    const { error } = await supabaseClient
+                        .from('user_data_anon')
+                        .upsert(data, { onConflict: 'device_id' });
+
+                    if (error) throw error;
+                    
+                    updateSyncStatus('online', 'Sincronizzato');
+                } catch (error) {
+                    console.error('Errore salvataggio cloud:', error);
+                    updateSyncStatus('offline', 'Errore salvataggio');
+                } finally {
+                    isSyncing = false;
+                }
+            }
+
+            async function loadFromCloud() {
+                if (!supabaseClient) return;
+                
+                try {
+                    isSyncing = true;
+                    updateSyncStatus('syncing', 'Caricamento...');
+                    
+                    const { data, error } = await supabaseClient
+                        .from('user_data_anon')
+                        .select('*')
+                        .eq('device_id', deviceId)
+                        .single();
+
+                    if (error && error.code !== 'PGRST116') throw error;
+                    
+                    if (data) {
+                        if (data.transactions && Array.isArray(data.transactions)) {
+                            transactions = data.transactions;
+                        }
+                        if (data.initial_balance !== undefined) {
+                            initialBalanceInput.value = data.initial_balance;
+                        }
+                        if (data.initial_balance_date) {
+                            initialBalanceDateInput.value = data.initial_balance_date;
+                        }
+                        if (data.target_date) {
+                            targetDateInput.value = data.target_date;
+                        }
+                        
+                        renderMovements();
+                        updateTotals();
+                        showToast('✅ Dati caricati dal cloud');
+                    }
+                    
+                    updateSyncStatus('online', 'Sincronizzato');
+                } catch (error) {
+                    console.error('Errore caricamento cloud:', error);
+                    updateSyncStatus('offline', 'Errore caricamento');
+                } finally {
+                    isSyncing = false;
+                }
+            }
+
+            // ============================================================
+            // CALCOLO SALDO ATTUALE
+            // ============================================================
+            function calculateCurrentBalance() {
+                const initialBal = parseFloat(initialBalanceInput.value) || 0;
+                const initialDate = initialBalanceDateInput.value;
+                const today = getToday();
+
+                initialDateLabel.textContent = formatDate(initialDate);
+                currentDateLabel.textContent = getTodayFormatted();
+
+                let totalIn = 0;
+                let totalOut = 0;
+
+                for (let t of transactions) {
+                    if (t.date < initialDate || t.date > today) continue;
+
+                    if (t.type === 'income' || t.type === 'recurring-income') {
+                        totalIn += t.amount;
+                    } else if (t.type === 'expense' || t.type === 'recurring-expense') {
+                        totalOut += t.amount;
+                    } else if (t.type === 'installment') {
+                        if (t.rates && t.rates.length) {
+                            for (let r of t.rates) {
+                                if (r.date >= initialDate && r.date <= today) {
+                                    totalOut += r.amount;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                const currentBalance = roundToCents(initialBal + totalIn - totalOut);
+                currentBalanceDisplay.textContent = formatCurrency(currentBalance);
+                
+                const displayEl = currentBalanceDisplay;
+                if (currentBalance > 0) {
+                    displayEl.style.color = '#6ee7b7';
+                } else if (currentBalance < 0) {
+                    displayEl.style.color = '#fca5a5';
+                } else {
+                    displayEl.style.color = '#94a3b8';
+                }
+
+                return currentBalance;
+            }
+
+            // ============================================================
+            // CALCOLO SALDO PREVISIONALE
+            // ============================================================
+            function calculateSaldo() {
+                const initialBal = parseFloat(initialBalanceInput.value) || 0;
+                const initialDate = initialBalanceDateInput.value;
+                const target = targetDateInput.value;
+                
+                if (!target) { alert('Seleziona una data target.'); return; }
+
+                let totalIn = 0;
+                let totalOut = 0;
+
+                for (let t of transactions) {
+                    if (t.date < initialDate || t.date > target) continue;
+
+                    if (t.type === 'income' || t.type === 'recurring-income') {
+                        totalIn += t.amount;
+                    } else if (t.type === 'expense' || t.type === 'recurring-expense') {
+                        totalOut += t.amount;
+                    } else if (t.type === 'installment') {
+                        if (t.rates && t.rates.length) {
+                            for (let r of t.rates) {
+                                if (r.date >= initialDate && r.date <= target) {
+                                    totalOut += r.amount;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                const finalBalance = roundToCents(initialBal + totalIn - totalOut);
+                resultDateLabel.textContent = formatDate(target);
+                resultAmount.textContent = formatCurrency(finalBalance);
+                resultAmount.className = 'amount ' + (finalBalance > 0 ? 'positive' : finalBalance < 0 ? 'negative' : 'zero');
+
+                totalIncomes.textContent = totalIn.toFixed(2).replace('.', ',') + ' €';
+                totalExpenses.textContent = totalOut.toFixed(2).replace('.', ',') + ' €';
+                estimatedBalance.textContent = formatCurrency(finalBalance);
+
+                return finalBalance;
+            }
+
+            function updateTotals() {
+                calculateCurrentBalance();
+                calculateSaldo();
+            }
+
+            // ============================================================
+            // SALVATAGGIO LOCALE
+            // ============================================================
+            function saveToLocalStorage() {
+                try {
+                    const data = {
+                        transactions: transactions,
+                        initialBalance: initialBalanceInput.value,
+                        initialBalanceDate: initialBalanceDateInput.value,
+                        targetDate: targetDateInput.value
+                    };
+                    localStorage.setItem('financeAppData', JSON.stringify(data));
+                } catch (e) {
+                    console.error('Errore salvataggio:', e);
+                }
+            }
+
+            function loadFromLocalStorage() {
+                try {
+                    const saved = localStorage.getItem('financeAppData');
+                    if (saved) {
+                        const data = JSON.parse(saved);
+                        if (data.transactions && Array.isArray(data.transactions)) {
+                            transactions = data.transactions;
+                        }
+                        if (data.initialBalance) {
+                            initialBalanceInput.value = data.initialBalance;
+                        }
+                        if (data.initialBalanceDate) {
+                            initialBalanceDateInput.value = data.initialBalanceDate;
+                        }
+                        if (data.targetDate) {
+                            targetDateInput.value = data.targetDate;
+                        }
+                        return true;
+                    }
+                } catch (e) {
+                    console.error('Errore caricamento:', e);
+                }
+                return false;
+            }
+
+// ============================================================
+// RENDER MOVIMENTI - ORDINATO PER DATA (dalla più vecchia alla più recente)
+// ============================================================
+function renderMovements() {
+    if (transactions.length === 0) {
+        movementsList.innerHTML = '<div class="empty">Nessun movimento inserito</div>';
+        return;
+    }
+
+    // Ordina per data (dalla più vecchia alla più recente)
+    const sorted = [...transactions].filter(t => t.date).sort((a, b) => {
+        // Converti in Date per un confronto sicuro
+        const dateA = new Date(a.date + 'T00:00:00');
+        const dateB = new Date(b.date + 'T00:00:00');
+        return dateA - dateB; // Più vecchia prima
+    });
+
+    let html = `<div class="table-wrapper"><table>
+        <thead><tr><th>Data</th><th>Descrizione</th><th>Tipo</th><th>Importo</th><th>Dettaglio</th><th></th></tr></thead><tbody>`;
+    
+    for (let t of sorted) {
+        let typeLabel = '';
+        let typeClass = '';
+        let detail = '';
+        
+        if (t.type === 'income') { 
+            typeLabel = 'Entrata'; 
+            typeClass = 'income'; 
+        } else if (t.type === 'expense') { 
+            typeLabel = 'Spesa'; 
+            typeClass = 'expense'; 
+        } else if (t.type === 'recurring-income') { 
+            typeLabel = 'Entrata Ricorrente'; 
+            typeClass = 'recurring'; 
+        } else if (t.type === 'recurring-expense') { 
+            typeLabel = 'Spesa Ricorrente'; 
+            typeClass = 'recurring'; 
+        } else if (t.type === 'installment') {
+            typeLabel = 'Rate'; 
+            typeClass = 'installment';
+            if (t.rates && t.rates.length > 0) {
+                detail = t.rates.map(r => `${formatCurrency(r.amount)} (${formatDate(r.date)})`).join('; ');
+            }
+        }
+        
+        const sign = (t.type === 'income' || t.type === 'recurring-income') ? '+' : '-';
+        const amountStr = formatCurrency(t.amount);
+        html += `<tr>
+            <td>${formatDate(t.date)}</td>
+            <td><strong>${t.desc}</strong> ${t.recurring_info ? '<span style="font-size:0.7rem;color:#6b7f9e;">(ricorrente)</span>' : ''}</td>
+            <td><span class="tag ${typeClass}">${typeLabel}</span></td>
+            <td>${sign} ${amountStr}</td>
+            <td style="font-size:0.8rem; max-width:200px; word-break:break-word;">${detail || '—'}</td>
+            <td><button class="delete-btn" data-id="${t.id}">✕</button></td>
+        </tr>`;
+    }
+    html += '</tbody></table></div>';
+    movementsList.innerHTML = html;
+
+    document.querySelectorAll('#movementsList .delete-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = this.dataset.id;
+            transactions = transactions.filter(t => t.id !== id);
+            renderMovements();
+            updateTotals();
+            saveToLocalStorage();
+            await saveToCloud();
+            showToast('🗑️ Movimento eliminato');
+        });
+    });
+}
+
+            // ============================================================
+            // RENDER RATE TEMPORANEE
+            // ============================================================
+            function renderTempRates() {
+                rateListContainer.innerHTML = '';
+                if (tempRates.length === 0) {
+                    rateListContainer.innerHTML = '<div style="color:#6b7f9e; font-size:0.9rem;">Nessuna rata aggiunta</div>';
+                    totalRatesAmount.textContent = '0.00';
+                    clearRatesBtn.style.display = 'none';
+                    updateRemaining();
+                    return;
+                }
+                clearRatesBtn.style.display = 'inline-block';
+                let total = 0;
+                
+                tempRates.forEach((r, idx) => {
+                    total += r.amount;
+                    const isLast = (idx === tempRates.length - 1);
+                    const isEditing = (editingIndex === idx);
+                    
+                    const div = document.createElement('div');
+                    div.className = 'rate-item';
+                    
+                    if (isEditing) {
+                        div.innerHTML = `
+                            <div class="rate-info" style="flex:1; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                                <span style="font-weight:500;">Rata ${idx+1}</span>
+                                <input type="number" step="0.01" class="edit-input" id="edit-amount-${idx}" value="${r.amount.toFixed(2)}" style="width:120px;">
+                                <input type="date" class="edit-date-input" id="edit-date-${idx}" value="${r.date}" style="width:140px;">
+                            </div>
+                            <div class="rate-actions">
+                                <button class="btn-save-edit" data-index="${idx}">💾 Salva</button>
+                                <button class="btn-cancel-edit" data-index="${idx}">✖ Annulla</button>
+                                <button class="delete-btn" data-index="${idx}">✕</button>
+                            </div>
+                        `;
+                    } else {
+                        const dateFormatted = formatDate(r.date);
+                        div.innerHTML = `
+                            <div class="rate-info">
+                                <span><strong>${formatCurrency(r.amount)}</strong> · scadenza ${dateFormatted}</span>
+                                <span class="badge ${isLast ? 'last' : ''}">${isLast ? 'Ultima' : 'Rata ' + (idx+1)}</span>
+                            </div>
+                            <div class="rate-actions">
+                                <button class="btn-edit" data-index="${idx}">✏️ Modifica</button>
+                                <button class="delete-btn" data-index="${idx}">✕</button>
+                            </div>
+                        `;
+                    }
+                    
+                    rateListContainer.appendChild(div);
+                });
+                
+                totalRatesAmount.textContent = total.toFixed(2);
+                updateRemaining();
+
+                document.querySelectorAll('#rateListContainer .delete-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        const idx = parseInt(this.dataset.index, 10);
+                        if (editingIndex === idx) editingIndex = null;
+                        tempRates.splice(idx, 1);
+                        renderTempRates();
+                    });
+                });
+
+                document.querySelectorAll('#rateListContainer .btn-edit').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        const idx = parseInt(this.dataset.index, 10);
+                        editingIndex = idx;
+                        renderTempRates();
+                    });
+                });
+
+                document.querySelectorAll('#rateListContainer .btn-save-edit').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        const idx = parseInt(this.dataset.index, 10);
+                        const newAmount = parseFloat(document.getElementById(`edit-amount-${idx}`).value);
+                        const newDate = document.getElementById(`edit-date-${idx}`).value;
+                        
+                        if (isNaN(newAmount) || newAmount <= 0) {
+                            alert('Inserisci un importo valido.');
+                            return;
+                        }
+                        if (!newDate) {
+                            alert('Inserisci una data valida.');
+                            return;
+                        }
+                        
+                        const total = parseFloat(amountInput.value) || 0;
+                        const sumOtherRates = tempRates.reduce((acc, r, i) => {
+                            if (i !== idx) return acc + r.amount;
+                            return acc;
+                        }, 0);
+                        
+                        if (newAmount > total - sumOtherRates + 0.01) {
+                            alert(`L'importo supera il rimanente disponibile.`);
+                            return;
+                        }
+                        
+                        tempRates[idx].amount = roundToCents(newAmount);
+                        tempRates[idx].date = newDate;
+                        editingIndex = null;
+                        renderTempRates();
+                    });
+                });
+
+                document.querySelectorAll('#rateListContainer .btn-cancel-edit').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        editingIndex = null;
+                        renderTempRates();
+                    });
+                });
+            }
+
+            function updateRemaining() {
+                const total = parseFloat(amountInput.value) || 0;
+                const sumRates = tempRates.reduce((acc, r) => acc + r.amount, 0);
+                const remaining = roundToCents(total - sumRates);
+                
+                remainingAmount.textContent = formatCurrency(remaining);
+                const remainingEl = remainingAmount.parentElement;
+                
+                remainingEl.className = 'remaining';
+                if (remaining < -0.01) {
+                    remainingEl.classList.add('negative');
+                } else if (Math.abs(remaining) < 0.01) {
+                    remainingEl.classList.add('zero');
+                }
+                
+                if (remaining > 0.01 && tempRates.length > 0) {
+                    const standardRate = parseFloat(standardRateAmount.value);
+                    if (!isNaN(standardRate) && standardRate > 0) {
+                        if (remaining <= standardRate + 0.01) {
+                            rateAmount.value = remaining.toFixed(2);
+                        } else {
+                            rateAmount.value = standardRate.toFixed(2);
+                        }
+                    } else if (lastRateAmount !== null) {
+                        if (remaining <= lastRateAmount + 0.01) {
+                            rateAmount.value = remaining.toFixed(2);
+                        } else {
+                            rateAmount.value = lastRateAmount.toFixed(2);
+                        }
+                    }
+                } else if (Math.abs(remaining) < 0.01) {
+                    rateAmount.value = '';
+                }
+            }
+
+            // ============================================================
+            // GENERAZIONE AUTOMATICA RATE
+            // ============================================================
+            function autoGenerateRates() {
+                const total = parseFloat(amountInput.value);
+                const numRates = parseInt(totalRatesInput.value);
+                const firstDate = rateDate.value;
+                const standardRate = parseFloat(standardRateAmount.value);
+
+                if (isNaN(total) || total <= 0) {
+                    alert('Inserisci prima l\'importo totale della spesa.');
+                    return;
+                }
+                if (isNaN(numRates) || numRates < 2) {
+                    alert('Il numero di rate deve essere almeno 2.');
+                    return;
+                }
+                if (!firstDate) {
+                    alert('Inserisci la data della prima rata.');
+                    return;
+                }
+
+                let rateAmountValue = standardRate;
+                if (isNaN(rateAmountValue) || rateAmountValue <= 0) {
+                    rateAmountValue = total / numRates;
+                }
+                
+                rateAmountValue = roundToCents(rateAmountValue);
+                
+                const totalStandard = rateAmountValue * (numRates - 1);
+                let lastRateAmount = roundToCents(total - totalStandard);
+                
+                if (lastRateAmount < 0.01) {
+                    alert('L\'importo standard è troppo alto. Riducilo o aumenta il numero di rate.');
+                    return;
+                }
+
+                tempRates = [];
+                
+                for (let i = 0; i < numRates; i++) {
+                    let date;
+                    if (i === 0) {
+                        date = firstDate;
+                    } else {
+                        date = addMonthsKeepingDay(firstDate, i);
+                    }
+                    
+                    let amount = rateAmountValue;
+                    if (i === numRates - 1) {
+                        amount = lastRateAmount;
+                    }
+                    
+                    tempRates.push({ amount: amount, date: date });
+                }
+
+                let sum = tempRates.reduce((acc, r) => acc + r.amount, 0);
+                sum = roundToCents(sum);
+                const totalRounded = roundToCents(total);
+                
+                if (Math.abs(sum - totalRounded) > 0.01) {
+                    const diff = roundToCents(totalRounded - sum);
+                    const lastIndex = tempRates.length - 1;
+                    tempRates[lastIndex].amount = roundToCents(tempRates[lastIndex].amount + diff);
+                }
+
+                editingIndex = null;
+                renderTempRates();
+                showToast(`✅ Generate ${numRates} rate con successo!`);
+            }
+
+            // ============================================================
+            // AGGIUNGI RATA MANUALE
+            // ============================================================
+            function addTempRate() {
+                const amt = parseFloat(rateAmount.value);
+                const date = rateDate.value;
+                const total = parseFloat(amountInput.value) || 0;
+                const sumRates = tempRates.reduce((acc, r) => acc + r.amount, 0);
+                const remaining = roundToCents(total - sumRates);
+
+                if (isNaN(amt) || amt <= 0) {
+                    alert('Inserisci un importo valido per la rata.');
+                    return;
+                }
+                if (!date) {
+                    alert('Inserisci una data per la rata.');
+                    return;
+                }
+                
+                const amtRounded = roundToCents(amt);
+                if (amtRounded > remaining + 0.01) {
+                    alert(`L'importo della rata (${formatCurrency(amtRounded)}) supera il rimanente (${formatCurrency(remaining)}).`);
+                    return;
+                }
+
+                lastRateAmount = amtRounded;
+                tempRates.push({ amount: amtRounded, date: date });
+                
+                const nextDate = addMonthsKeepingDay(date, 1);
+                rateDate.value = nextDate;
+
+                editingIndex = null;
+                renderTempRates();
+            }
+
+            // ============================================================
+            // TOGGLE SEZIONI
+            // ============================================================
+            function toggleSections() {
+                const type = transactionType.value;
+                
+                // Nascondi tutto
+                rateSection.style.display = 'none';
+                recurringSection.style.display = 'none';
+                
+                if (type === 'installment') {
+                    rateSection.style.display = 'block';
+                    updateRemaining();
+                } else if (type === 'recurring-expense' || type === 'recurring-income') {
+                    recurringSection.style.display = 'block';
+                    generateRecurringDates();
+                }
+                
+                // Pulisci rate se non sono in uso
+                if (type !== 'installment' && tempRates.length > 0) {
+                    tempRates = [];
+                    editingIndex = null;
+                    renderTempRates();
+                }
+            }
+
+            // ============================================================
+            // AGGIUNGI MOVIMENTO
+            // ============================================================
+            async function addTransaction() {
+                const type = transactionType.value;
+                const desc = descInput.value.trim();
+                const amount = parseFloat(amountInput.value);
+                const date = transactionDate.value;
+
+                if (!desc) { alert('Inserisci una descrizione.'); return; }
+                if (isNaN(amount) || amount <= 0) { alert('Inserisci un importo positivo.'); return; }
+                if (!date) { alert('Inserisci una data.'); return; }
+
+                let newTrans = null;
+
+                if (type === 'installment') {
+                    if (tempRates.length === 0) {
+                        alert('Aggiungi almeno una rata per la spesa a rate.');
+                        return;
+                    }
+                    const sumRates = tempRates.reduce((acc, r) => acc + r.amount, 0);
+                    const sumRounded = roundToCents(sumRates);
+                    const amountRounded = roundToCents(amount);
+                    
+                    if (Math.abs(sumRounded - amountRounded) > 0.01) {
+                        alert(`La somma delle rate (${sumRounded.toFixed(2)} €) non corrisponde all'importo totale (${amountRounded.toFixed(2)} €).`);
+                        return;
+                    }
+                    newTrans = {
+                        id: generateId(),
+                        type: 'installment',
+                        desc: desc,
+                        amount: amountRounded,
+                        date: date,
+                        rates: tempRates.map(r => ({ ...r }))
+                    };
+                    tempRates = [];
+                    editingIndex = null;
+                    renderTempRates();
+                    resetRateInputs();
+                } else if (type === 'recurring-expense' || type === 'recurring-income') {
+                    const months = parseInt(recurringMonths.value) || 0;
+                    if (months < 1) {
+                        alert('Inserisci un numero di mesi valido (almeno 1).');
+                        return;
+                    }
+                    
+                    const useLastDay = recurringLastDay.checked;
+                    const recurringDates = [];
+                    for (let i = 0; i < months; i++) {
+                        let d;
+                        if (useLastDay) {
+                            d = addMonthsLastDay(date, i);
+                        } else {
+                            d = addMonthsKeepingDay(date, i);
+                        }
+                        recurringDates.push(d);
+                    }
+                    
+                    // Crea un movimento per ogni data ricorrente
+                    const newTransactions = [];
+                    for (let d of recurringDates) {
+                        newTransactions.push({
+                            id: generateId() + '_' + d,
+                            type: type,
+                            desc: desc,
+                            amount: roundToCents(amount),
+                            date: d,
+                            rates: null,
+                            recurring_info: true,
+                            recurring_group: desc + '_' + date,
+                            recurring_index: newTransactions.length + 1,
+                            recurring_total: months
+                        });
+                    }
+                    
+                    transactions = transactions.concat(newTransactions);
+                    
+                    descInput.value = '';
+                    amountInput.value = '';
+                    
+                    renderMovements();
+                    updateTotals();
+                    saveToLocalStorage();
+                    await saveToCloud();
+                    showToast(`✅ Generati ${months} movimenti ricorrenti!`);
+                    return;
+                } else {
+                    newTrans = {
+                        id: generateId(),
+                        type: type,
+                        desc: desc,
+                        amount: roundToCents(amount),
+                        date: date,
+                        rates: null
+                    };
+                }
+
+                if (newTrans) {
+                    transactions.push(newTrans);
+                    descInput.value = '';
+                    amountInput.value = '';
+                    renderMovements();
+                    updateTotals();
+                    saveToLocalStorage();
+                    await saveToCloud();
+                    showToast('✅ Movimento aggiunto con successo!');
+                }
+            }
+
+            function resetRateInputs() {
+                rateAmount.value = '';
+                const today = getToday();
+                rateDate.value = today;
+                standardRateAmount.value = '';
+                totalRatesInput.value = '3';
+                lastRateAmount = null;
+                editingIndex = null;
+            }
+
+            // ============================================================
+            // CLEAR ALL
+            // ============================================================
+            async function clearAll() {
+                if (confirm('⚠️ Cancellare tutti i movimenti? Questa operazione è irreversibile!')) {
+                    transactions = [];
+                    tempRates = [];
+                    editingIndex = null;
+                    renderTempRates();
+                    renderMovements();
+                    updateTotals();
+                    saveToLocalStorage();
+                    await saveToCloud();
+                    showToast('🗑️ Tutti i movimenti sono stati cancellati');
+                }
+            }
+
+            // ============================================================
+            // EXPORT / IMPORT
+            // ============================================================
+            function exportData() {
+                const data = {
+                    version: '1.0',
+                    exportDate: new Date().toISOString(),
+                    transactions: transactions,
+                    initialBalance: initialBalanceInput.value,
+                    initialBalanceDate: initialBalanceDateInput.value,
+                    targetDate: targetDateInput.value
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `finanza_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('✅ Dati esportati con successo!');
+            }
+
+            function importData(file) {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.transactions && Array.isArray(data.transactions)) {
+                            transactions = data.transactions;
+                            if (data.initialBalance) initialBalanceInput.value = data.initialBalance;
+                            if (data.initialBalanceDate) initialBalanceDateInput.value = data.initialBalanceDate;
+                            if (data.targetDate) targetDateInput.value = data.targetDate;
+                            
+                            renderMovements();
+                            updateTotals();
+                            saveToLocalStorage();
+                            await saveToCloud();
+                            showToast('✅ Dati importati con successo!');
+                        } else {
+                            showToast('❌ Formato file non valido', true);
+                        }
+                    } catch (err) {
+                        showToast('❌ Errore durante l\'importazione', true);
+                        console.error(err);
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            // ============================================================
+            // INIZIALIZZA
+            // ============================================================
+            async function init() {
+                const today = getToday();
+                transactionDate.value = today;
+                rateDate.value = today;
+                
+                deviceId = getDeviceId();
+                
+                const hasSavedData = loadFromLocalStorage();
+                
+                if (!hasSavedData) {
+                    const target = new Date();
+                    target.setMonth(target.getMonth() + 3);
+                    const ty = target.getFullYear();
+                    const tm = String(target.getMonth() + 1).padStart(2, '0');
+                    const td = String(target.getDate()).padStart(2, '0');
+                    targetDateInput.value = `${ty}-${tm}-${td}`;
+                    
+                    const nextMonth = new Date();
+                    nextMonth.setMonth(nextMonth.getMonth() + 1);
+                    const nextMonthStr = nextMonth.toISOString().split('T')[0];
+                    const twoMonths = new Date();
+                    twoMonths.setMonth(twoMonths.getMonth() + 2);
+                    const twoMonthsStr = twoMonths.toISOString().split('T')[0];
+                    
+                    transactions.push({
+                        id: generateId(),
+                        type: 'income',
+                        desc: 'Stipendio',
+                        amount: 1500,
+                        date: '2026-01-15',
+                        rates: null
+                    });
+                    transactions.push({
+                        id: generateId(),
+                        type: 'expense',
+                        desc: 'Affitto',
+                        amount: 600,
+                        date: '2026-02-01',
+                        rates: null
+                    });
+                    
+                    const rates = [
+                        { amount: 100, date: nextMonthStr },
+                        { amount: 100, date: twoMonthsStr }
+                    ];
+                    transactions.push({
+                        id: generateId(),
+                        type: 'installment',
+                        desc: 'Telefono a rate',
+                        amount: 200,
+                        date: '2026-01-01',
+                        rates: rates
+                    });
+
+                    // Esempio di spesa ricorrente (6 movimenti singoli)
+                    for (let i = 0; i < 6; i++) {
+                        const d = addMonthsKeepingDay('2026-01-15', i);
+                        transactions.push({
+                            id: generateId() + '_' + d,
+                            type: 'recurring-expense',
+                            desc: 'Abbonamento palestra',
+                            amount: 50,
+                            date: d,
+                            rates: null,
+                            recurring_info: true,
+                            recurring_group: 'Abbonamento palestra_2026-01-15',
+                            recurring_index: i + 1,
+                            recurring_total: 6
+                        });
+                    }
+
+                    // Esempio di entrata ricorrente (12 movimenti singoli - ultimo giorno del mese)
+                    for (let i = 0; i < 12; i++) {
+                        const d = addMonthsLastDay('2026-01-31', i);
+                        transactions.push({
+                            id: generateId() + '_' + d,
+                            type: 'recurring-income',
+                            desc: 'Affitto ricevuto',
+                            amount: 500,
+                            date: d,
+                            rates: null,
+                            recurring_info: true,
+                            recurring_group: 'Affitto ricevuto_2026-01-31',
+                            recurring_index: i + 1,
+                            recurring_total: 12
+                        });
+                    }
+
+                    saveToLocalStorage();
+                }
+
+                toggleSections();
+                renderMovements();
+                updateTotals();
+                
+                await loadFromCloud();
+                
+                if (hasSavedData) {
+                    showToast('💾 Dati caricati');
+                }
+            }
+
+            // ============================================================
+            // EVENT LISTENERS
+            // ============================================================
+            transactionType.addEventListener('change', function() {
+                toggleSections();
+                if (this.value === 'recurring-expense' || this.value === 'recurring-income') {
+                    generateRecurringDates();
+                }
+            });
+            
+            amountInput.addEventListener('input', function() {
+                if (transactionType.value === 'installment') {
+                    updateRemaining();
+                }
+            });
+
+            // Eventi ricorrenti
+            recurringMonths.addEventListener('input', generateRecurringDates);
+            recurringLastDay.addEventListener('change', generateRecurringDates);
+            transactionDate.addEventListener('change', function() {
+                if (transactionType.value === 'recurring-expense' || transactionType.value === 'recurring-income') {
+                    generateRecurringDates();
+                }
+            });
+
+            addRateBtn.addEventListener('click', addTempRate);
+            autoGenerateBtn.addEventListener('click', autoGenerateRates);
+            
+            clearRatesBtn.addEventListener('click', function() {
+                tempRates = [];
+                editingIndex = null;
+                renderTempRates();
+            });
+            
+            addTransactionBtn.addEventListener('click', addTransaction);
+            clearAllBtn.addEventListener('click', clearAll);
+            
+            exportDataBtn.addEventListener('click', exportData);
+            importDataBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+            fileInput.addEventListener('change', function(e) {
+                if (this.files && this.files[0]) {
+                    importData(this.files[0]);
+                    this.value = '';
+                }
+            });
+
+            updateBalanceBtn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                updateTotals();
+                saveToLocalStorage();
+                await saveToCloud();
+                showToast('✅ Saldo aggiornato');
+            });
+
+            calculateBtn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                calculateSaldo();
+                saveToLocalStorage();
+                await saveToCloud();
+                showToast('✅ Previsione calcolata');
+            });
+
+            initialBalanceInput.addEventListener('change', async function() {
+                updateTotals();
+                saveToLocalStorage();
+                await saveToCloud();
+            });
+            initialBalanceDateInput.addEventListener('change', async function() {
+                updateTotals();
+                saveToLocalStorage();
+                await saveToCloud();
+            });
+            targetDateInput.addEventListener('change', async function() {
+                calculateSaldo();
+                saveToLocalStorage();
+                await saveToCloud();
+            });
+
+            document.querySelectorAll('input, select').forEach(el => {
+                el.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (this.id === 'rateAmount' || this.id === 'rateDate' || this.id === 'totalRates' || this.id === 'standardRateAmount') {
+                            addTempRate();
+                        } else {
+                            addTransaction();
+                        }
+                    }
+                });
+            });
+
+            setInterval(() => {
+                if (!isSyncing) {
+                    saveToCloud();
+                }
+            }, 30000);
+
+            // ============================================================
+            // AVVIA
+            // ============================================================
+            await init();
+
+            console.log('📌 Per utilizzare il cloud devi:');
+            console.log('1. Avere un account su https://app.supabase.com');
+            console.log('2. Avere un progetto creato');
+            console.log('3. Sostituire SUPABASE_URL e SUPABASE_ANON_KEY nel codice');
+            console.log('4. Creare la tabella "user_data_anon" con questo SQL:');
+            console.log(`
+CREATE TABLE user_data_anon (
+    device_id TEXT PRIMARY KEY,
+    transactions JSONB NOT NULL DEFAULT '[]'::jsonb,
+    initial_balance DECIMAL(10,2) DEFAULT 0,
+    initial_balance_date DATE,
+    target_date DATE,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE user_data_anon ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Enable insert for all users"
+    ON user_data_anon FOR INSERT
+    WITH CHECK (true);
+
+CREATE POLICY "Enable update for all users"
+    ON user_data_anon FOR UPDATE
+    USING (true);
+
+CREATE POLICY "Enable select for all users"
+    ON user_data_anon FOR SELECT
+    USING (true);
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_user_data_anon_updated_at 
+    BEFORE UPDATE ON user_data_anon 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+            `);
+        }
+
+        // ============================================================
+        // MODALITÀ OFFLINE
+        // ============================================================
+        async function initAppOffline() {
+            console.log('📱 App in modalità offline');
+            showToast('📱 Modalità offline - dati solo locali', false, true);
+            
+            // Inizializza comunque le funzionalità base
+            const today = getToday();
+            document.getElementById('transactionDate').value = today;
+            document.getElementById('rateDate').value = today;
+            
+            try {
+                const saved = localStorage.getItem('financeAppData');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    if (data.transactions) {
+                        window.transactions = data.transactions;
+                    }
+                    if (data.initialBalance) {
+                        document.getElementById('initialBalance').value = data.initialBalance;
+                    }
+                    if (data.initialBalanceDate) {
+                        document.getElementById('initialBalanceDate').value = data.initialBalanceDate;
+                    }
+                    if (data.targetDate) {
+                        document.getElementById('targetDate').value = data.targetDate;
+                    }
+                }
+            } catch(e) {}
+            
+            updateTotalsOffline();
+        }
+
+        function updateTotalsOffline() {
+            const bal = parseFloat(document.getElementById('initialBalance').value) || 0;
+            document.getElementById('currentBalanceDisplay').textContent = formatCurrency(bal);
+            document.getElementById('currentBalanceDisplay').style.color = '#6ee7b7';
+        }
+
+        function formatCurrency(val) {
+            return val.toFixed(2).replace('.', ',') + ' €';
+        }
+
+        function getToday() {
+            const d = new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        // ============================================================
+        // AVVIA
+        // ============================================================
+        startApp();
+    })();
+</script>
+</body>
+</html>
