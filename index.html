@@ -1302,11 +1302,16 @@
                             <button class="btn btn-secondary btn-small" id="manageCategoriesBtn" style="margin-top: 0; padding: 10px 14px; width: auto;" title="Gestisci Categorie">📂</button>
                         </div>
                     </div>
-                    <div class="form-group" style="grid-column: span 3;">
-                        <label>&nbsp;</label>
-                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                            <span style="font-size: 0.85rem; color: #666;">💡 Seleziona una categoria esistente o gestiscile cliccando su 📂</span>
-                        </div>
+                    <div class="form-group">
+                        <label>💳 Pagato tramite</label>
+                        <select id="paymentMethod">
+                            <option value="">Non specificato</option>
+                            <option value="banca">Banca</option>
+                            <option value="paypal">PayPal</option>
+                            <option value="scalapay">Scalapay</option>
+                            <option value="klarna">Klarna</option>
+                            <option value="cofidis">Cofidis</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -1387,6 +1392,15 @@
                 <select id="filterCategory">
                     <option value="all">Tutte le categorie</option>
                 </select>
+                <select id="filterMethod">
+                    <option value="all">Tutti i pagamenti</option>
+                    <option value="banca">Banca</option>
+                            <option value="paypal">PayPal</option>
+                            <option value="scalapay">Scalapay</option>
+                            <option value="klarna">Klarna</option>
+                            <option value="cofidis">Cofidis</option>
+                    <option value="none">Non specificato</option>
+                </select>
                 <button class="btn btn-secondary btn-small" id="resetFiltersBtn" style="margin: 0; padding: 6px 14px; width: auto;">🔄 Reset</button>
             </div>
 
@@ -1455,6 +1469,17 @@
                     <label>📂 Categoria</label>
                     <select id="editCategory">
                         <option value="">Senza categoria</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>💳 Pagato tramite</label>
+                    <select id="editMethod">
+                        <option value="">Non specificato</option>
+                        <option value="banca">Banca</option>
+                            <option value="paypal">PayPal</option>
+                            <option value="scalapay">Scalapay</option>
+                            <option value="klarna">Klarna</option>
+                            <option value="cofidis">Cofidis</option>
                     </select>
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
@@ -1548,6 +1573,17 @@
         let filterMonth = 'all';
         let filterCategory = 'all';
         let filterSearch = '';
+        let filterMethod = 'all';
+
+        const PAYMENT_METHODS = { banca: 'Banca', paypal: 'PayPal', scalapay: 'Scalapay', klarna: 'Klarna', cofidis: 'Cofidis' };
+        function getMethodName(m) {
+            return PAYMENT_METHODS[m] || '—';
+        }
+        function methodMatches(t) {
+            if (filterMethod === 'all') return true;
+            if (filterMethod === 'none') return !PAYMENT_METHODS[t.method];
+            return t.method === filterMethod;
+        }
 
         // ============================================================
         // DOM ELEMENTI
@@ -1565,6 +1601,9 @@
         const amountInput = document.getElementById('amount');
         const transactionDate = document.getElementById('transactionDate');
         const categorySelect = document.getElementById('categorySelect');
+        const paymentMethodSelect = document.getElementById('paymentMethod');
+        const editMethod = document.getElementById('editMethod');
+        const filterMethodSelect = document.getElementById('filterMethod');
         const rateSection = document.getElementById('rateSection');
         const recurringSection = document.getElementById('recurringSection');
         const totalRatesInput = document.getElementById('totalRates');
@@ -1829,6 +1868,7 @@
             // Categoria
             const categoryName = getCategoryName(t.category).toLowerCase();
             if (categoryName.includes(term)) return true;
+            if (PAYMENT_METHODS[t.method] && PAYMENT_METHODS[t.method].toLowerCase().includes(term)) return true;
             
             return false;
         }
@@ -2316,6 +2356,7 @@
             editAmount.value = t.amount || 0;
             editDate.value = t.date || '';
             editCategory.value = t.category || '';
+            editMethod.value = PAYMENT_METHODS[t.method] ? t.method : '';
 
             let note = document.getElementById('editInstallmentNote');
             if (!note) {
@@ -2365,7 +2406,8 @@
                 desc: desc,
                 amount: roundToCents(amount),
                 date: date,
-                category: category
+                category: category,
+                method: editMethod.value || ''
             };
             if (!inst) updated.rates = null;
             transactions[index] = updated;
@@ -2404,6 +2446,7 @@
             const search = hasSearchFilter();
             for (const t of transactions) {
                 if (filterCategory !== 'all' && t.category !== filterCategory) continue;
+                if (!methodMatches(t)) continue;
                 if (search && !matchesSearch(t, filterSearch)) continue;
 
                 if (isInstallment(t)) {
@@ -2427,7 +2470,7 @@
             const target = targetDateInput.value;
             const initialBal = parseFloat(initialBalanceInput.value) || 0;
 
-            const hasFilter = filterMonth !== 'all' || filterCategory !== 'all' || hasSearchFilter();
+            const hasFilter = filterMonth !== 'all' || filterCategory !== 'all' || filterMethod !== 'all' || hasSearchFilter();
             let html = '';
 
             if (hasFilter) {
@@ -2472,6 +2515,28 @@
                             </span>
                         </div>
                     `;
+                    if (PAYMENT_METHODS[filterMethod]) {
+                        // Rate (intero piano) dei movimenti elencati pagati con questo metodo
+                        let mPaid = 0, mPaidCount = 0, mDue = 0, mDueCount = 0;
+                        for (const it of items) {
+                            if (!isInstallment(it.t)) continue;
+                            for (const r of numberedRates(it.t)) {
+                                if (r.date > today) { mDue += r.amount; mDueCount++; }
+                                else { mPaid += r.amount; mPaidCount++; }
+                            }
+                        }
+                        const mTot = mPaidCount + mDueCount;
+                        html += `
+                        <div class="totals-row border-top">
+                            <span class="label">💳 Rate ${PAYMENT_METHODS[filterMethod]} (al ${getTodayFormatted()})</span>
+                            <span class="values">
+                                ${mTot === 0 ? '<span style="color:#6b7280;">Nessuna spesa a rate tra questi movimenti</span>' : `
+                                <span style="color:#2563eb; font-weight:600;">✅ pagate: ${mPaidCount} di ${mTot} (${formatCurrency(roundToCents(mPaid))})</span>
+                                <span class="expenses">⏳ da pagare: ${mDueCount} di ${mTot} (${formatCurrency(roundToCents(mDue))})</span>`}
+                            </span>
+                        </div>
+                        `;
+                    }
                     if (filterMonth !== 'all') {
                         html += `
                         <div class="totals-row border-top">
@@ -2579,7 +2644,7 @@
             rows.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
             let html = `<div class="table-wrapper"><table>
-                <thead><tr><th>Data</th><th>Descrizione</th><th>Categoria</th><th>Tipo</th><th>Importo</th><th>Dettaglio</th><th>Azioni</th></tr></thead><tbody>`;
+                <thead><tr><th>Data</th><th>Descrizione</th><th>Categoria</th><th>Pagamento</th><th>Tipo</th><th>Importo</th><th>Dettaglio</th><th>Azioni</th></tr></thead><tbody>`;
 
             for (const row of rows) {
                 const t = row.t;
@@ -2643,6 +2708,7 @@
                     <td>${formatDate(row.date)}</td>
                     <td><strong>${descDisplay}</strong> ${t.recurring_info ? '<span style="font-size:0.7rem;color:#6b7f9e;">(ricorrente)</span>' : ''}</td>
                     <td><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${categoryColor}; margin-right:6px;"></span>${categoryName}</td>
+                    <td>${getMethodName(t.method)}</td>
                     <td><span class="tag ${typeClass}">${typeLabel}</span></td>
                     <td>${sign} ${amountStr}</td>
                     <td style="font-size:0.8rem; max-width:200px; word-break:break-word;">${detail || '—'}</td>
@@ -3004,6 +3070,7 @@
             const amount = parseFloat(amountInput.value);
             const date = transactionDate.value;
             const category = categorySelect.value || '';
+            const method = paymentMethodSelect.value || '';
 
             if (!desc) { alert('Inserisci una descrizione.'); return; }
             if (isNaN(amount) || amount <= 0) { alert('Inserisci un importo positivo.'); return; }
@@ -3031,6 +3098,7 @@
                     amount: amountRounded,
                     date: date,
                     category: category,
+                    method: method,
                     rates: tempRates.map(r => ({ ...r }))
                 };
                 tempRates = [];
@@ -3065,6 +3133,7 @@
                         amount: roundToCents(amount),
                         date: d,
                         category: category,
+                    method: method,
                         rates: null,
                         recurring_info: true,
                         recurring_group: desc + '_' + date,
@@ -3093,6 +3162,7 @@
                     amount: roundToCents(amount),
                     date: date,
                     category: category,
+                    method: method,
                     rates: null
                 };
             }
@@ -3301,6 +3371,7 @@
                             date: r.date,
                             desc: t.desc,
                             category: t.category,
+                            method: t.method,
                             n: r.n,
                             total: r.total,
                             amount: r.amount,
@@ -3321,6 +3392,7 @@
                                 desc: t.desc,
                                 rateLabel: `rata ${r.n}/${r.total}`,
                                 category: t.category,
+                            method: t.method,
                                 type: 'expense',
                                 amount: r.amount
                             });
@@ -3330,6 +3402,7 @@
 
                     plans.push({
                         desc: t.desc,
+                        method: t.method,
                         total: roundToCents(planTotal),
                         count: rates.length,
                         paidCount: paidCount,
@@ -3344,6 +3417,7 @@
                         desc: t.desc,
                         rateLabel: '',
                         category: t.category,
+                            method: t.method,
                         type: isIncome ? 'income' : 'expense',
                         amount: amt
                     });
@@ -3405,7 +3479,7 @@
                     h += `
                         <tr>
                             <td>${formatDate(e.date)}</td>
-                            <td>${escapeHtml(e.desc)} <span class="rate-sub">· ${escapeHtml(getCategoryName(e.category))}</span></td>
+                            <td>${escapeHtml(e.desc)} <span class="rate-sub">· ${escapeHtml(getCategoryName(e.category))}${PAYMENT_METHODS[e.method] ? ' · ' + PAYMENT_METHODS[e.method] : ''}</span></td>
                             <td>${e.n}/${e.total}</td>
                             ${showStatus ? '<td>' + status + '</td>' : ''}
                             <td class="amount-expense">${formatCurrency(e.amount)}</td>
@@ -3452,8 +3526,9 @@
                         <thead>
                             <tr>
                                 <th style="width: 14%;">Data</th>
-                                <th style="width: 36%;">Descrizione</th>
-                                <th style="width: 18%;">Categoria</th>
+                                <th style="width: 27%;">Descrizione</th>
+                                <th style="width: 15%;">Categoria</th>
+                                <th style="width: 12%;">Pagamento</th>
                                 <th style="width: 16%; text-align: right;">Entrata</th>
                                 <th style="width: 16%; text-align: right;">Uscita</th>
                             </tr>
@@ -3462,7 +3537,7 @@
             `;
 
             if (data.movements.length === 0) {
-                html += `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #6b7f9e; font-style: italic;">Nessun movimento nel periodo selezionato</td></tr>`;
+                html += `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #6b7f9e; font-style: italic;">Nessun movimento nel periodo selezionato</td></tr>`;
             } else {
                 for (const m of data.movements) {
                     const isIncome = m.type === 'income';
@@ -3472,6 +3547,7 @@
                             <td>${formatDate(m.date)}</td>
                             <td>${escapeHtml(m.desc)}${rateNote}</td>
                             <td>${escapeHtml(getCategoryName(m.category))}</td>
+                            <td>${getMethodName(m.method)}</td>
                             <td class="amount-income">${isIncome ? formatCurrency(m.amount) : '—'}</td>
                             <td class="amount-expense">${!isIncome ? formatCurrency(m.amount) : '—'}</td>
                         </tr>
@@ -3539,7 +3615,7 @@
                 for (const p of data.plans) {
                     html += `
                         <tr>
-                            <td>${escapeHtml(p.desc)}</td>
+                            <td>${escapeHtml(p.desc)}${PAYMENT_METHODS[p.method] ? ' <span class="rate-sub">· ' + PAYMENT_METHODS[p.method] + '</span>' : ''}</td>
                             <td style="text-align:right;">${formatCurrency(p.total)}</td>
                             <td>${p.paidCount} di ${p.count}</td>
                             <td style="text-align:right; color:#2563eb; font-weight:600;">${formatCurrency(p.paid)}</td>
@@ -3895,6 +3971,10 @@
             renderMovements();
             renderTotals();
         });
+        filterMethodSelect.addEventListener('change', function() {
+            filterMethod = this.value;
+            renderMovements();
+        });
         filterCategorySelect.addEventListener('change', function() {
             filterCategory = this.value;
             renderMovements();
@@ -3918,6 +3998,8 @@
             filterSearch = '';
             filterMonthSelect.value = 'all';
             filterCategorySelect.value = 'all';
+            filterMethod = 'all';
+            filterMethodSelect.value = 'all';
             filterSearchInput.value = '';
             renderMovements();
             renderTotals();
@@ -4038,7 +4120,7 @@
         // Gestione Enter: solo sui campi del form di inserimento e della stampa
         // (login, modifica e categorie hanno già i propri gestori)
         const rateFieldIds = ['rateAmount', 'rateDate', 'totalRates', 'standardRateAmount'];
-        const insertFieldIds = ['transactionType', 'desc', 'amount', 'transactionDate', 'categorySelect', 'recurringMonths'];
+        const insertFieldIds = ['transactionType', 'desc', 'amount', 'transactionDate', 'categorySelect', 'paymentMethod', 'recurringMonths'];
         document.querySelectorAll('input, select').forEach(el => {
             el.addEventListener('keypress', function(e) {
                 if (e.key !== 'Enter') return;
