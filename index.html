@@ -1123,6 +1123,37 @@
             padding-top: 10px;
         }
 
+        /* ============ PROSPETTO RATE (pensato per schermo verticale) ============ */
+        .rp-note { color: #6b7f9e; font-size: 0.8rem; margin-bottom: 12px; }
+        .rp-card { border: 1px solid #e4ecf7; border-radius: 16px; margin-bottom: 14px; overflow: hidden; background: #fff; }
+        .rp-card.rp-total { border: 2px solid #0b2b4a; }
+        .rp-head { background: #f0f5fe; padding: 12px 14px; }
+        .rp-total .rp-head { background: #0b2b4a; color: #fff; }
+        .rp-title { font-size: 1.05rem; font-weight: 700; color: #0b2b4a; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+        .rp-total .rp-title { color: #fff; }
+        .rp-pills { display: flex; gap: 8px; margin-top: 8px; }
+        .rp-pill { flex: 1; border-radius: 12px; padding: 8px 10px; background: #fff; min-width: 0; }
+        .rp-pill .k { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+        .rp-pill .v { font-size: 1.05rem; font-weight: 700; white-space: nowrap; }
+        .rp-pill .n { font-size: 0.75rem; color: #6b7f9e; }
+        .rp-pill.paid .k, .rp-pill.paid .v { color: #2563eb; }
+        .rp-pill.due .k, .rp-pill.due .v { color: #dc2626; }
+        .rp-month { padding: 10px 14px; border-top: 1px solid #ecf1f8; }
+        .rp-mrow { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+        .rp-mname { font-weight: 700; color: #1e3a5f; }
+        .rp-mamt { font-weight: 700; color: #dc2626; white-space: nowrap; font-size: 1.05rem; }
+        .rp-msub { font-size: 0.75rem; color: #6b7f9e; margin-top: 1px; }
+        .rp-msub .p { color: #2563eb; font-weight: 600; }
+        .rp-line { display: flex; justify-content: space-between; gap: 10px; font-size: 0.85rem; padding: 5px 0 0; }
+        .rp-line .d { min-width: 0; overflow-wrap: anywhere; }
+        .rp-line .d small { color: #6b7f9e; white-space: nowrap; }
+        .rp-line .a { white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .rp-bar { height: 6px; border-radius: 6px; background: #ecf1f8; margin-top: 6px; overflow: hidden; }
+        .rp-bar > span { display: block; height: 100%; background: #dc2626; border-radius: 6px; }
+        .rp-done { padding: 10px 14px; color: #059669; font-size: 0.9rem; font-weight: 600; }
+        .rp-jump { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 6px; -webkit-overflow-scrolling: touch; }
+        .rp-jump button { width: auto; flex: 0 0 auto; padding: 6px 12px; font-size: 0.8rem; border-radius: 40px; border: 1.5px solid #dce3ef; background: #fff; color: #1e3a5f; font-weight: 600; cursor: pointer; }
+
         @media (max-width: 640px) {
             .form-grid, .form-grid-3, .form-grid-4 {
                 grid-template-columns: 1fr;
@@ -1130,7 +1161,9 @@
             .rate-config {
                 grid-template-columns: 1fr;
             }
-            .card { padding: 16px; }
+            body { padding: 10px; }
+            .card { padding: 14px 12px; border-radius: 18px; }
+            .rp-head, .rp-month, .rp-done { padding-left: 12px; padding-right: 12px; }
             .rate-row { flex-direction: column; align-items: stretch; }
             .row-buttons { justify-content: stretch; }
             .row-buttons .btn-small { width: 100%; }
@@ -3809,6 +3842,7 @@
             const order = ['banca', 'paypal', 'scalapay', 'klarna', 'cofidis', 'none'];
             const nameOf = k => PAYMENT_METHODS[k] || 'Non specificato';
             const nRate = n => n + (n === 1 ? ' rata' : ' rate');
+            const sum = arr => roundToCents(arr.reduce((a, e) => a + e.amount, 0));
 
             const groups = {};
             for (const t of transactions) {
@@ -3827,90 +3861,84 @@
                 return;
             }
 
-            let html = `<p class="text-muted" style="margin-bottom:14px;">Situazione al ${getTodayFormatted()}: una rata è considerata pagata se la sua data è oggi o precedente. Sono elencati i mesi in cui ci sono rate ancora da pagare.</p>`;
             const dueByMonth = {};   // ym -> { metodo: importo }
+            let cards = '';
 
             for (const k of keys) {
                 const list = groups[k];
                 const paidList = list.filter(e => e.paid);
                 const dueList = list.filter(e => !e.paid);
-                const sum = arr => roundToCents(arr.reduce((a, e) => a + e.amount, 0));
                 const months = Array.from(new Set(dueList.map(e => e.ym))).sort();
 
-                html += `
-                    <div style="border:1px solid #e4ecf7; border-radius:16px; padding:14px 16px; margin-bottom:16px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-                            <strong style="font-size:1.05rem; color:#0b2b4a;">💳 ${nameOf(k)}</strong>
-                            <span style="font-size:0.85rem;">
-                                <span style="color:#2563eb; font-weight:600;">✅ pagate: ${paidList.length} di ${list.length} (${formatCurrency(sum(paidList))})</span>
-                                &nbsp;·&nbsp;
-                                <span style="color:#dc2626; font-weight:600;">⏳ da pagare: ${dueList.length} di ${list.length} (${formatCurrency(sum(dueList))})</span>
-                            </span>
+                cards += `
+                    <div class="rp-card" id="rp-${k}">
+                        <div class="rp-head">
+                            <div class="rp-title"><span>💳 ${nameOf(k)}</span><span style="font-size:0.8rem; font-weight:600; color:#6b7f9e;">${nRate(list.length)}</span></div>
+                            <div class="rp-pills">
+                                <div class="rp-pill paid"><div class="k">✅ Pagate</div><div class="v">${formatCurrency(sum(paidList))}</div><div class="n">${paidList.length} di ${list.length}</div></div>
+                                <div class="rp-pill due"><div class="k">⏳ Da pagare</div><div class="v">${formatCurrency(sum(dueList))}</div><div class="n">${dueList.length} di ${list.length}</div></div>
+                            </div>
                         </div>
                 `;
 
                 if (months.length === 0) {
-                    html += '<div class="text-muted">Tutte le rate sono state pagate.</div></div>';
+                    cards += '<div class="rp-done">Tutte le rate sono state pagate.</div></div>';
                     continue;
                 }
-
-                html += `<div style="overflow-x:auto;"><table class="print-table" style="min-width:520px;">
-                    <thead><tr>
-                        <th style="width:20%;">Mese</th>
-                        <th style="width:20%;">Pagate</th>
-                        <th style="width:20%;">Da pagare</th>
-                        <th>Dettaglio rate da pagare</th>
-                    </tr></thead><tbody>`;
 
                 for (const ym of months) {
                     const mPaid = paidList.filter(e => e.ym === ym);
                     const mDue = dueList.filter(e => e.ym === ym).sort(byDate);
                     if (!dueByMonth[ym]) dueByMonth[ym] = {};
                     dueByMonth[ym][k] = sum(mDue);
-                    const detail = mDue.map(e => `${escapeHtml(e.desc)} ${e.n}/${e.total} (${formatDate(e.date)}): ${formatCurrency(e.amount)}`).join('<br>');
-                    html += `<tr>
-                        <td><strong>${monthLabel(ym)}</strong></td>
-                        <td style="color:#2563eb;">${mPaid.length > 0 ? nRate(mPaid.length) + ' · ' + formatCurrency(sum(mPaid)) : '—'}</td>
-                        <td class="text-danger" style="font-weight:600;">${nRate(mDue.length)} · ${formatCurrency(sum(mDue))}</td>
-                        <td style="font-size:0.8rem;">${detail}</td>
-                    </tr>`;
+                    cards += `
+                        <div class="rp-month">
+                            <div class="rp-mrow"><span class="rp-mname">${monthLabel(ym)}</span><span class="rp-mamt">${formatCurrency(sum(mDue))}</span></div>
+                            <div class="rp-msub">${nRate(mDue.length)} da pagare${mPaid.length > 0 ? ` · <span class="p">${mPaid.length === 1 ? '1 già pagata' : mPaid.length + ' già pagate'} (${formatCurrency(sum(mPaid))})</span>` : ''}</div>
+                            ${mDue.map(e => `<div class="rp-line"><span class="d">${escapeHtml(e.desc)} <small>· rata ${e.n}/${e.total} · ${formatDate(e.date).slice(0, 5)}</small></span><span class="a">${formatCurrency(e.amount)}</span></div>`).join('')}
+                        </div>`;
                 }
-                html += `<tr class="print-totals-row">
-                        <td style="border-top:2px solid #0b2b4a;">Totale</td>
-                        <td style="border-top:2px solid #0b2b4a;"></td>
-                        <td class="text-danger" style="border-top:2px solid #0b2b4a;">${nRate(dueList.length)} · ${formatCurrency(sum(dueList))}</td>
-                        <td style="border-top:2px solid #0b2b4a;"></td>
-                    </tr></tbody></table></div></div>`;
+                cards += '</div>';
             }
 
-            // Riepilogo complessivo: da pagare per mese e per tipo di pagamento
+            // Riepilogo complessivo: da pagare per mese, con la quota di ogni tipo di pagamento
+            let totalCard = '';
             const allMonths = Object.keys(dueByMonth).sort();
             if (allMonths.length > 0) {
-                const cols = keys.filter(k => allMonths.some(ym => dueByMonth[ym][k]));
-                const colTot = {};
-                let grand = 0;
-                html += `<div style="border:2px solid #0b2b4a; border-radius:16px; padding:14px 16px;">
-                    <strong style="font-size:1.05rem; color:#0b2b4a;">📊 Totale da pagare per mese</strong>
-                    <div style="overflow-x:auto; margin-top:10px;"><table class="print-table" style="min-width:520px;">
-                    <thead><tr><th>Mese</th>${cols.map(k => `<th style="text-align:right;">${nameOf(k)}</th>`).join('')}<th style="text-align:right;">Totale</th></tr></thead><tbody>`;
+                const rowTot = ym => roundToCents(keys.reduce((a, k) => a + (dueByMonth[ym][k] || 0), 0));
+                const grand = roundToCents(allMonths.reduce((a, ym) => a + rowTot(ym), 0));
+                const max = Math.max.apply(null, allMonths.map(rowTot)) || 1;
+                totalCard = `
+                    <div class="rp-card rp-total" id="rp-total">
+                        <div class="rp-head">
+                            <div class="rp-title"><span>📊 Da pagare per mese</span><span>${formatCurrency(grand)}</span></div>
+                        </div>`;
                 for (const ym of allMonths) {
-                    let rowTot = 0;
-                    html += `<tr><td><strong>${monthLabel(ym)}</strong></td>`;
-                    for (const k of cols) {
-                        const v = dueByMonth[ym][k] || 0;
-                        rowTot += v;
-                        colTot[k] = (colTot[k] || 0) + v;
-                        html += `<td style="text-align:right;">${v ? formatCurrency(v) : '—'}</td>`;
-                    }
-                    grand += rowTot;
-                    html += `<td class="amount-expense">${formatCurrency(roundToCents(rowTot))}</td></tr>`;
+                    const tot = rowTot(ym);
+                    totalCard += `
+                        <div class="rp-month">
+                            <div class="rp-mrow"><span class="rp-mname">${monthLabel(ym)}</span><span class="rp-mamt">${formatCurrency(tot)}</span></div>
+                            <div class="rp-bar"><span style="width:${Math.max(3, Math.round(tot / max * 100))}%;"></span></div>
+                            ${keys.filter(k => dueByMonth[ym][k]).map(k => `<div class="rp-line"><span class="d">${nameOf(k)}</span><span class="a">${formatCurrency(dueByMonth[ym][k])}</span></div>`).join('')}
+                        </div>`;
                 }
-                html += `<tr class="print-totals-row"><td style="border-top:2px solid #0b2b4a;">Totale</td>`
-                    + cols.map(k => `<td style="border-top:2px solid #0b2b4a; text-align:right;">${formatCurrency(roundToCents(colTot[k] || 0))}</td>`).join('')
-                    + `<td class="amount-expense" style="border-top:2px solid #0b2b4a;">${formatCurrency(roundToCents(grand))}</td></tr></tbody></table></div></div>`;
+                totalCard += '</div>';
             }
 
-            box.innerHTML = html;
+            // Scorciatoie per saltare a un riquadro (utile su telefono)
+            let jump = '<div class="rp-jump">';
+            if (totalCard) jump += '<button type="button" data-target="rp-total">📊 Totale</button>';
+            jump += keys.map(k => `<button type="button" data-target="rp-${k}">${nameOf(k)}</button>`).join('') + '</div>';
+
+            box.innerHTML = `<p class="rp-note">Situazione al ${getTodayFormatted()}. Una rata è considerata pagata se la sua data è oggi o precedente.</p>`
+                + jump + totalCard + cards;
+
+            box.querySelectorAll('.rp-jump button').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const el = document.getElementById(this.dataset.target);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            });
         }
 
         // ============================================================
