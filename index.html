@@ -1262,6 +1262,7 @@
         <div class="tabs">
             <button class="tab-btn active" onclick="showTab('insert')">➕ Inserisci Movimento</button>
             <button class="tab-btn" onclick="showTab('list')">📋 Lista Movimenti</button>
+            <button class="tab-btn" onclick="showTab('rates')">📅 Prospetto Rate</button>
         </div>
 
         <!-- TAB INSERIMENTO -->
@@ -1368,6 +1369,12 @@
                 <button class="btn" id="addTransactionBtn">➕ Aggiungi movimento</button>
                 <button class="btn btn-secondary btn-small" id="clearRatesBtn" style="display: none;">🗑️ Cancella rate</button>
             </div>
+        </div>
+
+        <!-- TAB PROSPETTO RATE -->
+        <div id="rates-tab" class="tab-content">
+            <h2 style="margin-bottom: 6px;">📅 Prospetto rate per tipo di pagamento</h2>
+            <div id="ratesProspect"></div>
         </div>
 
         <!-- TAB LISTA MOVIMENTI -->
@@ -1885,6 +1892,9 @@
             
             if (tabName === 'list') {
                 renderTotals();
+            }
+            if (tabName === 'rates') {
+                renderRatesProspect();
             }
         };
 
@@ -3321,6 +3331,7 @@
             calculateCurrentBalance();
             calculateSaldo(false);
             renderTotals();
+            renderRatesProspect();
         }
 
         // ============================================================
@@ -3784,6 +3795,122 @@
             printWindow.document.open();
             printWindow.document.write(buildPrintDocument(p.startDate, p.endDate, true));
             printWindow.document.close();
+        }
+
+        // ============================================================
+        // PROSPETTO RATE PER TIPO DI PAGAMENTO
+        // ============================================================
+        function renderRatesProspect() {
+            const box = document.getElementById('ratesProspect');
+            if (!box) return;
+            const today = getToday();
+            const MONTHS = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+            const monthLabel = ym => MONTHS[parseInt(ym.slice(5, 7), 10) - 1] + ' ' + ym.slice(0, 4);
+            const order = ['banca', 'paypal', 'scalapay', 'klarna', 'cofidis', 'none'];
+            const nameOf = k => PAYMENT_METHODS[k] || 'Non specificato';
+            const nRate = n => n + (n === 1 ? ' rata' : ' rate');
+
+            const groups = {};
+            for (const t of transactions) {
+                if (!isInstallment(t)) continue;
+                const key = PAYMENT_METHODS[t.method] ? t.method : 'none';
+                if (!groups[key]) groups[key] = [];
+                for (const r of numberedRates(t)) {
+                    if (!r.date) continue;
+                    groups[key].push({ ym: r.date.slice(0, 7), date: r.date, desc: t.desc, n: r.n, total: r.total, amount: r.amount, paid: r.date <= today });
+                }
+            }
+            const keys = order.filter(k => groups[k] && groups[k].length > 0);
+
+            if (keys.length === 0) {
+                box.innerHTML = '<div class="empty">Nessuna spesa a rate inserita</div>';
+                return;
+            }
+
+            let html = `<p class="text-muted" style="margin-bottom:14px;">Situazione al ${getTodayFormatted()}: una rata è considerata pagata se la sua data è oggi o precedente. Sono elencati i mesi in cui ci sono rate ancora da pagare.</p>`;
+            const dueByMonth = {};   // ym -> { metodo: importo }
+
+            for (const k of keys) {
+                const list = groups[k];
+                const paidList = list.filter(e => e.paid);
+                const dueList = list.filter(e => !e.paid);
+                const sum = arr => roundToCents(arr.reduce((a, e) => a + e.amount, 0));
+                const months = Array.from(new Set(dueList.map(e => e.ym))).sort();
+
+                html += `
+                    <div style="border:1px solid #e4ecf7; border-radius:16px; padding:14px 16px; margin-bottom:16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                            <strong style="font-size:1.05rem; color:#0b2b4a;">💳 ${nameOf(k)}</strong>
+                            <span style="font-size:0.85rem;">
+                                <span style="color:#2563eb; font-weight:600;">✅ pagate: ${paidList.length} di ${list.length} (${formatCurrency(sum(paidList))})</span>
+                                &nbsp;·&nbsp;
+                                <span style="color:#dc2626; font-weight:600;">⏳ da pagare: ${dueList.length} di ${list.length} (${formatCurrency(sum(dueList))})</span>
+                            </span>
+                        </div>
+                `;
+
+                if (months.length === 0) {
+                    html += '<div class="text-muted">Tutte le rate sono state pagate.</div></div>';
+                    continue;
+                }
+
+                html += `<div style="overflow-x:auto;"><table class="print-table" style="min-width:520px;">
+                    <thead><tr>
+                        <th style="width:20%;">Mese</th>
+                        <th style="width:20%;">Pagate</th>
+                        <th style="width:20%;">Da pagare</th>
+                        <th>Dettaglio rate da pagare</th>
+                    </tr></thead><tbody>`;
+
+                for (const ym of months) {
+                    const mPaid = paidList.filter(e => e.ym === ym);
+                    const mDue = dueList.filter(e => e.ym === ym).sort(byDate);
+                    if (!dueByMonth[ym]) dueByMonth[ym] = {};
+                    dueByMonth[ym][k] = sum(mDue);
+                    const detail = mDue.map(e => `${escapeHtml(e.desc)} ${e.n}/${e.total} (${formatDate(e.date)}): ${formatCurrency(e.amount)}`).join('<br>');
+                    html += `<tr>
+                        <td><strong>${monthLabel(ym)}</strong></td>
+                        <td style="color:#2563eb;">${mPaid.length > 0 ? nRate(mPaid.length) + ' · ' + formatCurrency(sum(mPaid)) : '—'}</td>
+                        <td class="text-danger" style="font-weight:600;">${nRate(mDue.length)} · ${formatCurrency(sum(mDue))}</td>
+                        <td style="font-size:0.8rem;">${detail}</td>
+                    </tr>`;
+                }
+                html += `<tr class="print-totals-row">
+                        <td style="border-top:2px solid #0b2b4a;">Totale</td>
+                        <td style="border-top:2px solid #0b2b4a;"></td>
+                        <td class="text-danger" style="border-top:2px solid #0b2b4a;">${nRate(dueList.length)} · ${formatCurrency(sum(dueList))}</td>
+                        <td style="border-top:2px solid #0b2b4a;"></td>
+                    </tr></tbody></table></div></div>`;
+            }
+
+            // Riepilogo complessivo: da pagare per mese e per tipo di pagamento
+            const allMonths = Object.keys(dueByMonth).sort();
+            if (allMonths.length > 0) {
+                const cols = keys.filter(k => allMonths.some(ym => dueByMonth[ym][k]));
+                const colTot = {};
+                let grand = 0;
+                html += `<div style="border:2px solid #0b2b4a; border-radius:16px; padding:14px 16px;">
+                    <strong style="font-size:1.05rem; color:#0b2b4a;">📊 Totale da pagare per mese</strong>
+                    <div style="overflow-x:auto; margin-top:10px;"><table class="print-table" style="min-width:520px;">
+                    <thead><tr><th>Mese</th>${cols.map(k => `<th style="text-align:right;">${nameOf(k)}</th>`).join('')}<th style="text-align:right;">Totale</th></tr></thead><tbody>`;
+                for (const ym of allMonths) {
+                    let rowTot = 0;
+                    html += `<tr><td><strong>${monthLabel(ym)}</strong></td>`;
+                    for (const k of cols) {
+                        const v = dueByMonth[ym][k] || 0;
+                        rowTot += v;
+                        colTot[k] = (colTot[k] || 0) + v;
+                        html += `<td style="text-align:right;">${v ? formatCurrency(v) : '—'}</td>`;
+                    }
+                    grand += rowTot;
+                    html += `<td class="amount-expense">${formatCurrency(roundToCents(rowTot))}</td></tr>`;
+                }
+                html += `<tr class="print-totals-row"><td style="border-top:2px solid #0b2b4a;">Totale</td>`
+                    + cols.map(k => `<td style="border-top:2px solid #0b2b4a; text-align:right;">${formatCurrency(roundToCents(colTot[k] || 0))}</td>`).join('')
+                    + `<td class="amount-expense" style="border-top:2px solid #0b2b4a;">${formatCurrency(roundToCents(grand))}</td></tr></tbody></table></div></div>`;
+            }
+
+            box.innerHTML = html;
         }
 
         // ============================================================
