@@ -1468,6 +1468,16 @@
                 <select id="filterCategory">
                     <option value="all">Tutte le categorie</option>
                 </select>
+                <select id="filterType">
+                    <option value="all">Tutti i tipi</option>
+                    <option value="all-income">Tutte le entrate</option>
+                    <option value="all-expense">Tutte le uscite</option>
+                    <option value="income">Entrata</option>
+                    <option value="recurring-income">Entrata ricorrente</option>
+                    <option value="expense">Spesa (intero)</option>
+                    <option value="installment">Spesa a rate</option>
+                    <option value="recurring-expense">Spesa ricorrente</option>
+                </select>
                 <select id="filterMethod">
                     <option value="all">Tutti i pagamenti</option>
                     <option value="banca">Banca</option>
@@ -1650,6 +1660,13 @@
         let filterCategory = 'all';
         let filterSearch = '';
         let filterMethod = 'all';
+        let filterType = 'all';
+        function typeMatches(t) {
+            if (filterType === 'all') return true;
+            if (filterType === 'all-income') return isIncomeType(t);
+            if (filterType === 'all-expense') return !isIncomeType(t);
+            return t.type === filterType;
+        }
 
         const PAYMENT_METHODS = { banca: 'Banca', paypal: 'PayPal', scalapay: 'Scalapay', klarna: 'Klarna', cofidis: 'Cofidis' };
         function getMethodName(m) {
@@ -1680,6 +1697,7 @@
         const paymentMethodSelect = document.getElementById('paymentMethod');
         const editMethod = document.getElementById('editMethod');
         const filterMethodSelect = document.getElementById('filterMethod');
+        const filterTypeSelect = document.getElementById('filterType');
         const rateSection = document.getElementById('rateSection');
         const recurringSection = document.getElementById('recurringSection');
         const totalRatesInput = document.getElementById('totalRates');
@@ -2526,6 +2544,7 @@
             for (const t of transactions) {
                 if (filterCategory !== 'all' && t.category !== filterCategory) continue;
                 if (!methodMatches(t)) continue;
+                if (!typeMatches(t)) continue;
                 if (search && !matchesSearch(t, filterSearch)) continue;
 
                 if (isInstallment(t)) {
@@ -2549,7 +2568,7 @@
             const target = targetDateInput.value;
             const initialBal = parseFloat(initialBalanceInput.value) || 0;
 
-            const hasFilter = filterMonth !== 'all' || filterCategory !== 'all' || filterMethod !== 'all' || hasSearchFilter();
+            const hasFilter = filterMonth !== 'all' || filterCategory !== 'all' || filterMethod !== 'all' || filterType !== 'all' || hasSearchFilter();
             let html = '';
 
             if (hasFilter) {
@@ -4162,6 +4181,10 @@
             renderMovements();
             renderTotals();
         });
+        filterTypeSelect.addEventListener('change', function() {
+            filterType = this.value;
+            renderMovements();
+        });
         filterMethodSelect.addEventListener('change', function() {
             filterMethod = this.value;
             renderMovements();
@@ -4191,6 +4214,8 @@
             filterCategorySelect.value = 'all';
             filterMethod = 'all';
             filterMethodSelect.value = 'all';
+            filterType = 'all';
+            filterTypeSelect.value = 'all';
             filterSearchInput.value = '';
             renderMovements();
             renderTotals();
