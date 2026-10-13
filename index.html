@@ -1645,6 +1645,7 @@
         let currentUser = null;
         let isSyncing = false;
         let pendingSave = false;
+        let missingDateColumn = false;
         let editingTransactionId = null;
 
         let categories = [
@@ -2308,10 +2309,25 @@
                     target_date: targetDateInput.value || null,
                     updated_at: new Date().toISOString()
                 };
+                if (!missingDateColumn) {
+                    data.initial_balance_date = initialBalanceDateInput.value || null;
+                }
 
-                const { error } = await supabase
+                let { error } = await supabase
                     .from('user_data')
                     .upsert(data, { onConflict: 'user_id' });
+
+                // Se la colonna initial_balance_date non esiste ancora su Supabase,
+                // salva comunque il resto e avvisa una sola volta
+                if (error && !missingDateColumn && String(error.message || '').includes('initial_balance_date')) {
+                    missingDateColumn = true;
+                    delete data.initial_balance_date;
+                    console.warn('⚠️ Colonna initial_balance_date mancante su Supabase: la data del saldo iniziale resta solo in locale.');
+                    showToast('⚠️ Aggiorna la tabella Supabase: la data del saldo iniziale non viene sincronizzata', false, true);
+                    ({ error } = await supabase
+                        .from('user_data')
+                        .upsert(data, { onConflict: 'user_id' }));
+                }
 
                 if (error) throw error;
                 
@@ -2361,6 +2377,12 @@
                     
                     initialBalanceInput.value = data.current_balance || 0;
                     if (data.target_date) targetDateInput.value = data.target_date;
+                    if (data.initial_balance_date) {
+                        initialBalanceDateInput.value = data.initial_balance_date;
+                    } else if (Object.prototype.hasOwnProperty.call(data, 'initial_balance_date')) {
+                        // Colonna presente ma ancora vuota: la riempio con la data locale
+                        pendingSave = true;
+                    }
                     saveToLocalStorage();
                     
                     renderMovements();
@@ -4369,6 +4391,7 @@
         console.log('   - categories (JSONB)');
         console.log('   - current_balance (NUMERIC)');
         console.log('   - target_date (DATE)');
+        console.log('   - initial_balance_date (DATE)');
         console.log('   - updated_at (TIMESTAMPTZ)');
         console.log('3. Le policy RLS devono essere configurate');
     })();
