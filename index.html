@@ -1989,6 +1989,11 @@
         // ============================================================
         // GESTIONE CATEGORIE
         // ============================================================
+        function sortedCategories() {
+            return [...categories].sort((a, b) =>
+                String(a.name || '').localeCompare(String(b.name || ''), 'it', { sensitivity: 'base' }));
+        }
+
         function getCategoryName(categoryId) {
             if (!categoryId) return 'Senza categoria';
             const cat = categories.find(c => c.id === categoryId);
@@ -2028,7 +2033,7 @@
         function renderCategorySelect() {
             const currentValue = categorySelect.value;
             categorySelect.innerHTML = '<option value="">Senza categoria</option>';
-            categories.forEach(cat => {
+            sortedCategories().forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat.id;
                 option.textContent = cat.name;
@@ -2045,7 +2050,7 @@
         function renderFilterCategorySelect() {
             const currentValue = filterCategorySelect.value;
             filterCategorySelect.innerHTML = '<option value="all">Tutte le categorie</option>';
-            categories.forEach(cat => {
+            sortedCategories().forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat.id;
                 option.textContent = cat.name;
@@ -2060,7 +2065,7 @@
         function renderEditCategorySelect() {
             const currentValue = editCategory.value;
             editCategory.innerHTML = '<option value="">Senza categoria</option>';
-            categories.forEach(cat => {
+            sortedCategories().forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat.id;
                 option.textContent = cat.name;
@@ -2075,7 +2080,7 @@
         function renderCategoryManager() {
             if (!categoryList) return;
             categoryList.innerHTML = '';
-            categories.forEach(cat => {
+            sortedCategories().forEach(cat => {
                 const div = document.createElement('div');
                 div.className = 'category-item';
                 div.innerHTML = `
