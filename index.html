@@ -1374,14 +1374,12 @@
                     </div>
                     <div class="form-group">
                         <label>💳 Pagato tramite</label>
-                        <select id="paymentMethod">
-                            <option value="">Non specificato</option>
-                            <option value="banca">Banca</option>
-                            <option value="paypal">PayPal</option>
-                            <option value="scalapay">Scalapay</option>
-                            <option value="klarna">Klarna</option>
-                            <option value="cofidis">Cofidis</option>
-                        </select>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <select id="paymentMethod" style="flex: 1;">
+                                <option value="">Non specificato</option>
+                            </select>
+                            <button class="btn btn-secondary btn-small" id="manageMethodsBtn" style="margin-top: 0; padding: 10px 14px; width: auto;" title="Gestisci tipi di pagamento">⚙️</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1480,11 +1478,6 @@
                 </select>
                 <select id="filterMethod">
                     <option value="all">Tutti i pagamenti</option>
-                    <option value="banca">Banca</option>
-                            <option value="paypal">PayPal</option>
-                            <option value="scalapay">Scalapay</option>
-                            <option value="klarna">Klarna</option>
-                            <option value="cofidis">Cofidis</option>
                     <option value="none">Non specificato</option>
                 </select>
                 <button class="btn btn-secondary btn-small" id="resetFiltersBtn" style="margin: 0; padding: 6px 14px; width: auto;">🔄 Reset</button>
@@ -1517,6 +1510,24 @@
             </div>
             <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
                 <button class="btn btn-secondary btn-small" id="closeCategoryModal2" style="width: 100%;">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gestione Tipi di Pagamento (popup) -->
+    <div id="methodManagerModal" class="category-manager-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="margin: 0;">💳 Tipi di pagamento</h3>
+                <button class="btn btn-danger btn-small" id="closeMethodModal" style="margin: 0; padding: 6px 14px; width: auto;">✕</button>
+            </div>
+            <div id="methodList" class="category-manager" style="margin-bottom: 15px; max-height: 300px; overflow-y: auto;"></div>
+            <div class="add-category-row" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <input type="text" id="newMethodName" placeholder="Nuovo tipo di pagamento..." style="flex: 2; min-width: 160px;">
+                <button class="btn btn-success btn-small" id="addMethodBtn" style="margin: 0; padding: 8px 16px; width: auto;">➕ Aggiungi</button>
+            </div>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                <button class="btn btn-secondary btn-small" id="closeMethodModal2" style="width: 100%;">Chiudi</button>
             </div>
         </div>
     </div>
@@ -1561,11 +1572,6 @@
                     <label>💳 Pagato tramite</label>
                     <select id="editMethod">
                         <option value="">Non specificato</option>
-                        <option value="banca">Banca</option>
-                            <option value="paypal">PayPal</option>
-                            <option value="scalapay">Scalapay</option>
-                            <option value="klarna">Klarna</option>
-                            <option value="cofidis">Cofidis</option>
                     </select>
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
@@ -1645,7 +1651,7 @@
         let currentUser = null;
         let isSyncing = false;
         let pendingSave = false;
-        let missingDateColumn = false;
+        const missingColumns = new Set();
         let editingTransactionId = null;
 
         let categories = [
@@ -1669,9 +1675,37 @@
             return t.type === filterType;
         }
 
-        const PAYMENT_METHODS = { banca: 'Banca', paypal: 'PayPal', scalapay: 'Scalapay', klarna: 'Klarna', cofidis: 'Cofidis' };
+        const DEFAULT_PAYMENT_METHODS = [
+            { id: 'banca', name: 'Banca' },
+            { id: 'paypal', name: 'PayPal' },
+            { id: 'scalapay', name: 'Scalapay' },
+            { id: 'klarna', name: 'Klarna' },
+            { id: 'cofidis', name: 'Cofidis' }
+        ];
+        let paymentMethods = DEFAULT_PAYMENT_METHODS.map(m => ({ ...m }));
+        // Mappa id -> nome, ricostruita a ogni modifica dell'elenco
+        const PAYMENT_METHODS = {};
+        function rebuildMethodMap() {
+            Object.keys(PAYMENT_METHODS).forEach(k => delete PAYMENT_METHODS[k]);
+            paymentMethods.forEach(m => { PAYMENT_METHODS[m.id] = m.name; });
+        }
+        function isValidMethodList(list) {
+            return Array.isArray(list) && list.length > 0 &&
+                list.every(m => m && typeof m.id === 'string' && m.id && typeof m.name === 'string' && m.name.trim());
+        }
+        function setPaymentMethods(list) {
+            if (!isValidMethodList(list)) return false;
+            paymentMethods = list.map(m => ({ id: m.id, name: m.name.trim() }));
+            rebuildMethodMap();
+            return true;
+        }
+        function sortedMethods() {
+            return [...paymentMethods].sort((a, b) => a.name.localeCompare(b.name, 'it', { sensitivity: 'base' }));
+        }
+        rebuildMethodMap();
+        // Nome già pronto per l'HTML (i nomi ora li scrive l'utente)
         function getMethodName(m) {
-            return PAYMENT_METHODS[m] || '—';
+            return PAYMENT_METHODS[m] ? escapeHtml(PAYMENT_METHODS[m]) : '—';
         }
         function methodMatches(t) {
             if (filterMethod === 'all') return true;
@@ -1698,6 +1732,11 @@
         const paymentMethodSelect = document.getElementById('paymentMethod');
         const editMethod = document.getElementById('editMethod');
         const filterMethodSelect = document.getElementById('filterMethod');
+        const manageMethodsBtn = document.getElementById('manageMethodsBtn');
+        const methodManagerModal = document.getElementById('methodManagerModal');
+        const methodList = document.getElementById('methodList');
+        const newMethodName = document.getElementById('newMethodName');
+        const addMethodBtn = document.getElementById('addMethodBtn');
         const filterTypeSelect = document.getElementById('filterType');
         const rateSection = document.getElementById('rateSection');
         const recurringSection = document.getElementById('recurringSection');
@@ -2045,6 +2084,7 @@
             }
             renderFilterCategorySelect();
             renderEditCategorySelect();
+            renderMethodSelects();
         }
 
         function renderFilterCategorySelect() {
@@ -2150,6 +2190,121 @@
             renderCategoryManager();
             renderCategorySelect();
             return true;
+        }
+
+        // ============================================================
+        // GESTIONE TIPI DI PAGAMENTO
+        // ============================================================
+        function savePaymentMethodsLocal() {
+            try { localStorage.setItem('financePaymentMethods', JSON.stringify(paymentMethods)); } catch (e) {}
+        }
+
+        function loadPaymentMethodsLocal() {
+            try {
+                const saved = localStorage.getItem('financePaymentMethods');
+                if (saved) setPaymentMethods(JSON.parse(saved));
+            } catch (e) {}
+        }
+
+        function persistPaymentMethods() {
+            savePaymentMethodsLocal();
+            saveToLocalStorage();
+            saveToCloud();
+        }
+
+        function fillMethodSelect(select, firstOptions, extraOptions) {
+            const current = select.value;
+            select.innerHTML = '';
+            firstOptions.forEach(o => select.add(new Option(o.text, o.value)));
+            sortedMethods().forEach(m => select.add(new Option(m.name, m.id)));
+            (extraOptions || []).forEach(o => select.add(new Option(o.text, o.value)));
+            const values = Array.from(select.options).map(o => o.value);
+            select.value = values.includes(current) ? current : values[0];
+        }
+
+        function renderMethodSelects() {
+            fillMethodSelect(paymentMethodSelect, [{ value: '', text: 'Non specificato' }]);
+            fillMethodSelect(editMethod, [{ value: '', text: 'Non specificato' }]);
+            fillMethodSelect(filterMethodSelect, [{ value: 'all', text: 'Tutti i pagamenti' }], [{ value: 'none', text: 'Non specificato' }]);
+            if (filterMethodSelect.value !== filterMethod) filterMethod = filterMethodSelect.value;
+        }
+
+        function renderMethodManager() {
+            methodList.innerHTML = '';
+            if (paymentMethods.length === 0) {
+                methodList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">Nessun tipo di pagamento. Aggiungine uno!</div>';
+                return;
+            }
+            sortedMethods().forEach(m => {
+                const used = transactions.filter(t => t.method === m.id).length;
+                const div = document.createElement('div');
+                div.className = 'category-item';
+                div.innerHTML = `
+                    <span>💳</span>
+                    <span class="cat-name">${escapeHtml(m.name)} <span class="text-muted" style="font-size:0.75rem;">· ${used} ${used === 1 ? 'movimento' : 'movimenti'}</span></span>
+                    <div class="cat-actions">
+                        <button class="btn btn-secondary btn-small" data-action="rename" data-id="${escapeHtml(m.id)}" style="padding: 4px 8px; font-size: 0.7rem; margin: 0;" title="Rinomina">✏️</button>
+                        <button class="btn btn-danger btn-small" data-action="delete" data-id="${escapeHtml(m.id)}" style="padding: 4px 8px; font-size: 0.7rem; margin: 0;" title="Elimina">✕</button>
+                    </div>
+                `;
+                methodList.appendChild(div);
+            });
+        }
+
+        function methodNameTaken(name, exceptId) {
+            const n = name.trim().toLowerCase();
+            return paymentMethods.some(m => m.id !== exceptId && m.name.trim().toLowerCase() === n);
+        }
+
+        function refreshAfterMethodChange() {
+            rebuildMethodMap();
+            renderMethodSelects();
+            renderMethodManager();
+            renderMovements();
+            renderRatesProspect();
+        }
+
+        function addPaymentMethod(name) {
+            name = (name || '').trim();
+            if (!name) { showToast('Inserisci un nome per il tipo di pagamento', false, true); return null; }
+            if (methodNameTaken(name)) { showToast('Tipo di pagamento già esistente!', false, true); return null; }
+            const id = 'pm_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+            paymentMethods.push({ id: id, name: name });
+            refreshAfterMethodChange();
+            persistPaymentMethods();
+            showToast('✅ Tipo di pagamento aggiunto');
+            return id;
+        }
+
+        function renamePaymentMethod(id) {
+            const m = paymentMethods.find(x => x.id === id);
+            if (!m) return;
+            const newName = prompt('Modifica nome tipo di pagamento:', m.name);
+            if (newName === null) return;
+            const n = newName.trim();
+            if (!n || n === m.name) return;
+            if (methodNameTaken(n, id)) { showToast('Tipo di pagamento già esistente!', false, true); return; }
+            m.name = n;
+            refreshAfterMethodChange();
+            persistPaymentMethods();
+            showToast('✅ Nome aggiornato su tutti i movimenti');
+        }
+
+        async function deletePaymentMethod(id) {
+            const m = paymentMethods.find(x => x.id === id);
+            if (!m) return;
+            const used = transactions.filter(t => t.method === id).length;
+            const msg = used > 0
+                ? `Eliminare "${m.name}"? ${used} ${used === 1 ? 'movimento resterà' : 'movimenti resteranno'} senza tipo di pagamento ("Non specificato").`
+                : `Eliminare "${m.name}"?`;
+            if (!confirm(msg)) return;
+            paymentMethods = paymentMethods.filter(x => x.id !== id);
+            transactions.forEach(t => { if (t.method === id) t.method = ''; });
+            if (filterMethod === id) filterMethod = 'all';
+            refreshAfterMethodChange();
+            updateTotals();
+            persistPaymentMethods();
+            showToast('🗑️ Tipo di pagamento eliminato');
         }
 
         // ============================================================
@@ -2314,21 +2469,28 @@
                     target_date: targetDateInput.value || null,
                     updated_at: new Date().toISOString()
                 };
-                if (!missingDateColumn) {
-                    data.initial_balance_date = initialBalanceDateInput.value || null;
+                // Colonne aggiunte in seguito: se su Supabase non esistono ancora,
+                // il resto viene salvato comunque e si avvisa una sola volta
+                const optional = {
+                    initial_balance_date: { value: initialBalanceDateInput.value || null, what: 'la data del saldo iniziale' },
+                    payment_methods: { value: paymentMethods, what: 'i tipi di pagamento' }
+                };
+                for (const col in optional) {
+                    if (!missingColumns.has(col)) data[col] = optional[col].value;
                 }
 
                 let { error } = await supabase
                     .from('user_data')
                     .upsert(data, { onConflict: 'user_id' });
 
-                // Se la colonna initial_balance_date non esiste ancora su Supabase,
-                // salva comunque il resto e avvisa una sola volta
-                if (error && !missingDateColumn && String(error.message || '').includes('initial_balance_date')) {
-                    missingDateColumn = true;
-                    delete data.initial_balance_date;
-                    console.warn('⚠️ Colonna initial_balance_date mancante su Supabase: la data del saldo iniziale resta solo in locale.');
-                    showToast('⚠️ Aggiorna la tabella Supabase: la data del saldo iniziale non viene sincronizzata', false, true);
+                for (let attempt = 0; error && attempt < 2; attempt++) {
+                    const msg = String(error.message || '');
+                    const col = Object.keys(optional).find(c => c in data && msg.includes(c));
+                    if (!col) break;
+                    missingColumns.add(col);
+                    delete data[col];
+                    console.warn(`⚠️ Colonna ${col} mancante su Supabase: ${optional[col].what} restano solo in locale.`);
+                    showToast(`⚠️ Aggiorna la tabella Supabase: ${optional[col].what} non vengono sincronizzati`, false, true);
                     ({ error } = await supabase
                         .from('user_data')
                         .upsert(data, { onConflict: 'user_id' }));
@@ -2378,6 +2540,13 @@
                         console.log('📂 Categorie caricate dal locale:', categories.length);
                     }
                     
+                    if (!setPaymentMethods(data.payment_methods) &&
+                        Object.prototype.hasOwnProperty.call(data, 'payment_methods')) {
+                        // Colonna presente ma vuota: la riempio con l'elenco locale
+                        pendingSave = true;
+                    }
+                    savePaymentMethodsLocal();
+
                     renderCategorySelect();
                     
                     initialBalanceInput.value = data.current_balance || 0;
@@ -2418,6 +2587,7 @@
                 const data = {
                     transactions: transactions,
                     categories: categories,
+                    paymentMethods: paymentMethods,
                     initialBalance: initialBalanceInput.value,
                     initialBalanceDate: initialBalanceDateInput.value,
                     targetDate: targetDateInput.value
@@ -2439,6 +2609,9 @@
                     if (data.categories && data.categories.length > 0) {
                         categories = data.categories;
                         saveCategories();
+                    }
+                    if (setPaymentMethods(data.paymentMethods)) {
+                        savePaymentMethodsLocal();
                     }
                     if (data.initialBalance) {
                         initialBalanceInput.value = data.initialBalance;
@@ -2653,7 +2826,7 @@
                         const mTot = mPaidCount + mDueCount;
                         html += `
                         <div class="totals-row border-top">
-                            <span class="label">💳 Rate ${PAYMENT_METHODS[filterMethod]} (al ${getTodayFormatted()})</span>
+                            <span class="label">💳 Rate ${escapeHtml(PAYMENT_METHODS[filterMethod])} (al ${getTodayFormatted()})</span>
                             <span class="values">
                                 ${mTot === 0 ? '<span style="color:#6b7280;">Nessuna spesa a rate tra questi movimenti</span>' : `
                                 <span style="color:#2563eb; font-weight:600;">✅ pagate: ${mPaidCount} di ${mTot} (${formatCurrency(roundToCents(mPaid))})</span>
@@ -3342,6 +3515,7 @@
                 exportDate: new Date().toISOString(),
                 transactions: transactions,
                 categories: categories,
+                paymentMethods: paymentMethods,
                 initialBalance: initialBalanceInput.value,
                 initialBalanceDate: initialBalanceDateInput.value,
                 targetDate: targetDateInput.value
@@ -3368,6 +3542,7 @@
                             categories = data.categories;
                             saveCategories();
                         }
+                        if (setPaymentMethods(data.paymentMethods)) savePaymentMethodsLocal();
                         if (data.initialBalance) initialBalanceInput.value = data.initialBalance;
                         if (data.initialBalanceDate) initialBalanceDateInput.value = data.initialBalanceDate;
                         if (data.targetDate) targetDateInput.value = data.targetDate;
@@ -3605,7 +3780,7 @@
                     h += `
                         <tr>
                             <td>${formatDate(e.date)}</td>
-                            <td>${escapeHtml(e.desc)} <span class="rate-sub">· ${escapeHtml(getCategoryName(e.category))}${PAYMENT_METHODS[e.method] ? ' · ' + PAYMENT_METHODS[e.method] : ''}</span></td>
+                            <td>${escapeHtml(e.desc)} <span class="rate-sub">· ${escapeHtml(getCategoryName(e.category))}${PAYMENT_METHODS[e.method] ? ' · ' + escapeHtml(PAYMENT_METHODS[e.method]) : ''}</span></td>
                             <td>${e.n}/${e.total}</td>
                             ${showStatus ? '<td>' + status + '</td>' : ''}
                             <td class="amount-expense">${formatCurrency(e.amount)}</td>
@@ -3741,7 +3916,7 @@
                 for (const p of data.plans) {
                     html += `
                         <tr>
-                            <td>${escapeHtml(p.desc)}${PAYMENT_METHODS[p.method] ? ' <span class="rate-sub">· ' + PAYMENT_METHODS[p.method] + '</span>' : ''}</td>
+                            <td>${escapeHtml(p.desc)}${PAYMENT_METHODS[p.method] ? ' <span class="rate-sub">· ' + escapeHtml(PAYMENT_METHODS[p.method]) + '</span>' : ''}</td>
                             <td style="text-align:right;">${formatCurrency(p.total)}</td>
                             <td>${p.paidCount} di ${p.count}</td>
                             <td style="text-align:right; color:#2563eb; font-weight:600;">${formatCurrency(p.paid)}</td>
@@ -3921,8 +4096,8 @@
             const today = getToday();
             const MONTHS = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
             const monthLabel = ym => MONTHS[parseInt(ym.slice(5, 7), 10) - 1] + ' ' + ym.slice(0, 4);
-            const order = ['banca', 'paypal', 'scalapay', 'klarna', 'cofidis', 'none'];
-            const nameOf = k => PAYMENT_METHODS[k] || 'Non specificato';
+            const order = sortedMethods().map(m => m.id).concat(['none']);
+            const nameOf = k => PAYMENT_METHODS[k] ? escapeHtml(PAYMENT_METHODS[k]) : 'Non specificato';
             const nRate = n => n + (n === 1 ? ' rata' : ' rate');
             const sum = arr => roundToCents(arr.reduce((a, e) => a + e.amount, 0));
 
@@ -4032,6 +4207,7 @@
             rateDate.value = today;
             
             loadCategories();
+            loadPaymentMethodsLocal();
             
             const hasSavedData = loadFromLocalStorage();
             
@@ -4248,6 +4424,36 @@
             renderTotals();
         });
 
+        manageMethodsBtn.addEventListener('click', function() {
+            renderMethodManager();
+            methodManagerModal.style.display = 'flex';
+            newMethodName.value = '';
+        });
+        function closeMethodManager() {
+            methodManagerModal.style.display = 'none';
+        }
+        document.getElementById('closeMethodModal').addEventListener('click', closeMethodManager);
+        document.getElementById('closeMethodModal2').addEventListener('click', closeMethodManager);
+        methodManagerModal.addEventListener('click', function(e) {
+            if (e.target === this) closeMethodManager();
+        });
+        methodList.addEventListener('click', function(e) {
+            const btn = e.target.closest('button[data-action]');
+            if (!btn) return;
+            if (btn.dataset.action === 'rename') renamePaymentMethod(btn.dataset.id);
+            if (btn.dataset.action === 'delete') deletePaymentMethod(btn.dataset.id);
+        });
+        addMethodBtn.addEventListener('click', function() {
+            const id = addPaymentMethod(newMethodName.value);
+            if (id) {
+                newMethodName.value = '';
+                paymentMethodSelect.value = id;   // già selezionato nel movimento che stai inserendo
+            }
+        });
+        newMethodName.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); addMethodBtn.click(); }
+        });
+
         manageCategoriesBtn.addEventListener('click', function() {
             renderCategoryManager();
             categoryManagerModal.style.display = 'flex';
@@ -4397,6 +4603,7 @@
         console.log('   - current_balance (NUMERIC)');
         console.log('   - target_date (DATE)');
         console.log('   - initial_balance_date (DATE)');
+        console.log('   - payment_methods (JSONB)');
         console.log('   - updated_at (TIMESTAMPTZ)');
         console.log('3. Le policy RLS devono essere configurate');
     })();
