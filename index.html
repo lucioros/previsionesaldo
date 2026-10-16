@@ -1515,7 +1515,7 @@
     </div>
 
     <!-- Gestione Tipi di Pagamento (popup) -->
-    <div id="methodManagerModal" class="category-manager-modal">
+    <div id="methodManagerModal" class="category-manager-modal" style="z-index: 3500;">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 style="margin: 0;">💳 Tipi di pagamento</h3>
@@ -1570,9 +1570,12 @@
                 </div>
                 <div class="form-group">
                     <label>💳 Pagato tramite</label>
-                    <select id="editMethod">
-                        <option value="">Non specificato</option>
-                    </select>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select id="editMethod" style="flex: 1;">
+                            <option value="">Non specificato</option>
+                        </select>
+                        <button class="btn btn-secondary btn-small" id="manageMethodsEditBtn" style="margin-top: 0; padding: 10px 14px; width: auto;" title="Gestisci tipi di pagamento">⚙️</button>
+                    </div>
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <button class="btn btn-success" id="saveEditBtn">💾 Salva modifiche</button>
@@ -4424,10 +4427,18 @@
             renderTotals();
         });
 
-        manageMethodsBtn.addEventListener('click', function() {
+        // Campo in cui selezionare il tipo appena creato (inserimento o modifica)
+        let methodTargetSelect = paymentMethodSelect;
+        function openMethodManager(targetSelect) {
+            methodTargetSelect = targetSelect;
             renderMethodManager();
             methodManagerModal.style.display = 'flex';
             newMethodName.value = '';
+        }
+        manageMethodsBtn.addEventListener('click', function() { openMethodManager(paymentMethodSelect); });
+        document.getElementById('manageMethodsEditBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            openMethodManager(editMethod);
         });
         function closeMethodManager() {
             methodManagerModal.style.display = 'none';
@@ -4447,7 +4458,7 @@
             const id = addPaymentMethod(newMethodName.value);
             if (id) {
                 newMethodName.value = '';
-                paymentMethodSelect.value = id;   // già selezionato nel movimento che stai inserendo
+                methodTargetSelect.value = id;   // già selezionato nel movimento che stai inserendo o modificando
             }
         });
         newMethodName.addEventListener('keypress', function(e) {
