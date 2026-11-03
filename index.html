@@ -1206,6 +1206,12 @@
             .app-container { padding: 0 10px; }
         }
 
+        .period-filter { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .period-filter label { font-size: 0.85rem; font-weight: 600; color: #555; }
+        .category-filter .period-filter input { min-width: 0; width: auto; }
+        .mv-check { width: 34px; text-align: center; }
+        .mv-check input { width: 22px; height: 22px; padding: 0; cursor: pointer; accent-color: #ca8a04; }
+        .mv-wrap tr.mv-verified td { background: #fef08a; }
         .mv-amt { white-space: nowrap; font-weight: 600; font-variant-numeric: tabular-nums; }
         .mv-amt.in { color: #059669; }
         .mv-amt.out { color: #dc2626; }
@@ -1225,7 +1231,12 @@
                 padding: 10px 12px; margin-bottom: 8px; background: #fff;
             }
             .mv-wrap td { padding: 0; border: none; font-size: 0.8rem; color: #5e6f8d; }
-            .mv-wrap .mv-desc { order: 1; flex: 1 1 calc(100% - 130px); min-width: 0; font-size: 1rem; color: #1e3a5f; overflow-wrap: anywhere; }
+            .mv-wrap .mv-check { order: 0; flex: 0 0 auto; width: auto; }
+            .mv-wrap tr.mv-verified { background: #fef08a; border-color: #eab308; }
+            .mv-wrap tr.mv-verified td { background: transparent; }
+            .period-filter { display: grid; grid-template-columns: auto 1fr; }
+            .category-filter .period-filter input { width: 100%; }
+            .mv-wrap .mv-desc { order: 1; flex: 1 1 calc(100% - 170px); min-width: 0; font-size: 1rem; color: #1e3a5f; overflow-wrap: anywhere; }
             .mv-wrap .mv-amt { order: 2; flex: 0 0 auto; margin-left: auto; font-size: 1.05rem; font-weight: 700; }
             .mv-wrap .mv-amt.in { color: #059669; }
             .mv-wrap .mv-amt.out { color: #dc2626; }
@@ -1494,6 +1505,12 @@
                     <option value="all">Tutti i pagamenti</option>
                     <option value="none">Non specificato</option>
                 </select>
+                <span class="period-filter">
+                    <label for="filterFrom">Dal</label>
+                    <input type="date" id="filterFrom">
+                    <label for="filterTo">al</label>
+                    <input type="date" id="filterTo">
+                </span>
                 <button class="btn btn-secondary btn-small" id="resetFiltersBtn" style="margin: 0; padding: 6px 14px; width: auto;">🔄 Reset</button>
             </div>
 
@@ -1694,6 +1711,8 @@
         let filterSearch = '';
         let filterMethod = 'all';
         let filterType = 'all';
+        let filterFrom = '';
+        let filterTo = '';
         function typeMatches(t) {
             if (filterType === 'all') return true;
             if (filterType === 'all-income') return isIncomeType(t);
@@ -1929,7 +1948,9 @@
                 date: r.date,
                 amount: Number(r.amount) || 0,
                 n: i + 1,
-                total: sorted.length
+                total: sorted.length,
+                verified: !!r.verified,
+                ref: r
             }));
         }
 
@@ -2726,7 +2747,7 @@
 
             const section = document.getElementById('editRatesSection');
             if (inst) {
-                editRatesOriginal = numberedRates(t).map(r => ({ amount: r.amount, date: r.date }));
+                editRatesOriginal = numberedRates(t).map(r => ({ amount: r.amount, date: r.date, verified: r.verified }));
                 editRates = editRatesOriginal.map(r => ({ ...r }));
                 renderEditRates();
                 section.style.display = 'block';
@@ -2800,7 +2821,7 @@
                     return;
                 }
                 newRates = editRates
-                    .map(r => ({ amount: roundToCents(Number(r.amount)), date: r.date }))
+                    .map(r => (r.verified ? { amount: roundToCents(Number(r.amount)), date: r.date, verified: true } : { amount: roundToCents(Number(r.amount)), date: r.date }))
                     .sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
             }
 
@@ -2835,7 +2856,17 @@
             return !!(filterSearch && filterSearch.trim() !== '');
         }
 
+        function periodActive() {
+            return !!(filterFrom || filterTo);
+        }
+
+        // Filtro mese + filtro periodo "dal ... al ..." (estremi inclusi)
         function monthMatches(dateStr) {
+            if (periodActive()) {
+                if (!dateStr) return false;
+                if (filterFrom && dateStr < filterFrom) return false;
+                if (filterTo && dateStr > filterTo) return false;
+            }
             if (filterMonth === 'all') return true;
             if (!dateStr) return false;
             const [fy, fm] = filterMonth.split('-').map(Number);
@@ -2875,7 +2906,7 @@
             const target = targetDateInput.value;
             const initialBal = parseFloat(initialBalanceInput.value) || 0;
 
-            const hasFilter = filterMonth !== 'all' || filterCategory !== 'all' || filterMethod !== 'all' || filterType !== 'all' || hasSearchFilter();
+            const hasFilter = filterMonth !== 'all' || periodActive() || filterCategory !== 'all' || filterMethod !== 'all' || filterType !== 'all' || hasSearchFilter();
             let html = '';
 
             if (hasFilter) {
@@ -2942,7 +2973,7 @@
                         </div>
                         `;
                     }
-                    if (filterMonth !== 'all') {
+                    if (filterMonth !== 'all' || periodActive()) {
                         html += `
                         <div class="totals-row border-top">
                             <span class="label">📅 Rate da pagare nel periodo (dopo il ${getTodayFormatted()})</span>
@@ -3011,6 +3042,30 @@
             return out + escapeHtml(text.slice(last));
         }
 
+        async function toggleVerified(key, checked) {
+            const [id, idx] = key.split('|');
+            const t = transactions.find(x => x.id === id);
+            if (!t) return;
+            if (idx !== undefined && isInstallment(t)) {
+                const r = numberedRates(t)[parseInt(idx, 10)];
+                if (r) r.ref.verified = checked;
+            } else if (isInstallment(t)) {
+                t.rates.forEach(r => { r.verified = checked; });
+            } else {
+                t.verified = checked;
+            }
+            // Ridisegna mantenendo la posizione di scorrimento
+            const wrap = movementsList.querySelector('.table-wrapper');
+            const innerTop = wrap ? wrap.scrollTop : 0;
+            const pageY = window.scrollY;
+            renderMovements();
+            const wrap2 = movementsList.querySelector('.table-wrapper');
+            if (wrap2) wrap2.scrollTop = innerTop;
+            window.scrollTo(0, pageY);
+            saveToLocalStorage();
+            await saveToCloud();
+        }
+
         function renderMovements() {
             renderFilterMonthOptions();
 
@@ -3026,7 +3081,9 @@
             if (items.length === 0) {
                 const msg = transactions.length === 0
                     ? 'Nessun movimento inserito'
-                    : 'Nessun movimento corrisponde ai filtri selezionati';
+                    : (filterFrom && filterTo && filterFrom > filterTo)
+                        ? 'La data "dal" è successiva alla data "al": controlla il periodo'
+                        : 'Nessun movimento corrisponde ai filtri selezionati';
                 movementsList.innerHTML = '<div class="empty">' + msg + '</div>';
                 renderTotals();
                 return;
@@ -3040,7 +3097,7 @@
             // rata che ricade nel mese (solo quella rata, con il suo numero)
             const rows = [];
             for (const it of items) {
-                if (it.rates && filterMonth !== 'all') {
+                if (it.rates && (filterMonth !== 'all' || periodActive())) {
                     for (const r of it.rates) rows.push({ t: it.t, rate: r, date: r.date });
                 } else {
                     rows.push({ t: it.t, rate: null, date: it.t.date });
@@ -3049,7 +3106,7 @@
             rows.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
             let html = `<div class="table-wrapper mv-wrap"><table>
-                <thead><tr><th>Data</th><th>Descrizione</th><th>Categoria</th><th>Pagamento</th><th>Tipo</th><th>Importo</th><th>Dettaglio</th><th>Azioni</th></tr></thead><tbody>`;
+                <thead><tr><th class="mv-check" title="Verificato">✔</th><th>Data</th><th>Descrizione</th><th>Categoria</th><th>Pagamento</th><th>Tipo</th><th>Importo</th><th>Dettaglio</th><th>Azioni</th></tr></thead><tbody>`;
 
             for (const row of rows) {
                 const t = row.t;
@@ -3109,7 +3166,16 @@
                 const descDisplay = highlightText(t.desc, search ? filterSearch.trim() : '');
                 const safeId = escapeHtml(t.id);
 
-                html += `<tr>
+                // Spunta "verificato": per una riga di rata vale per quella rata,
+                // per la riga di una spesa a rate completa vale per tutte le sue rate
+                let verified;
+                if (rate) verified = rate.verified;
+                else if (isInstallment(t)) verified = t.rates.every(r => r.verified);
+                else verified = !!t.verified;
+                const checkKey = rate ? `${safeId}|${rate.n - 1}` : safeId;
+
+                html += `<tr class="${verified ? 'mv-verified' : ''}">
+                    <td class="mv-check"><input type="checkbox" class="verify-cb" data-key="${checkKey}" ${verified ? 'checked' : ''} title="Segna come verificato" aria-label="Verificato"></td>
                     <td class="mv-date">${formatDate(row.date)}</td>
                     <td class="mv-desc"><strong>${descDisplay}</strong> ${t.recurring_info ? '<span style="font-size:0.7rem;color:#6b7f9e;">(ricorrente)</span>' : ''}</td>
                     <td class="mv-cat"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${categoryColor}; margin-right:6px;"></span>${categoryName}</td>
@@ -3125,6 +3191,12 @@
             }
             html += '</tbody></table></div>';
             movementsList.innerHTML = html;
+
+            movementsList.querySelectorAll('.verify-cb').forEach(cb => {
+                cb.addEventListener('change', function() {
+                    toggleVerified(this.dataset.key, this.checked);
+                });
+            });
 
             movementsList.querySelectorAll('.edit-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
@@ -4516,7 +4588,22 @@
             renderTotals();
             filterSearchInput.focus();
         });
+        const filterFromInput = document.getElementById('filterFrom');
+        const filterToInput = document.getElementById('filterTo');
+        filterFromInput.addEventListener('change', function() {
+            filterFrom = this.value || '';
+            renderMovements();
+        });
+        filterToInput.addEventListener('change', function() {
+            filterTo = this.value || '';
+            renderMovements();
+        });
+
         resetFiltersBtn.addEventListener('click', function() {
+            filterFrom = '';
+            filterTo = '';
+            filterFromInput.value = '';
+            filterToInput.value = '';
             filterMonth = 'all';
             filterCategory = 'all';
             filterSearch = '';
