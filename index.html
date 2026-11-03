@@ -373,6 +373,20 @@
             font-weight: 600;
         }
 
+        .er-row { display: grid; grid-template-columns: 70px 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+        .er-row input { padding: 8px 10px; border-radius: 10px; font-size: 0.95rem; }
+        .er-row .er-n { font-weight: 700; color: #1e3a5f; font-size: 0.85rem; line-height: 1.2; }
+        .er-row .er-n small { display: block; font-weight: 600; font-size: 0.7rem; }
+        .er-sum { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-radius: 12px; margin-top: 6px; font-weight: 600; }
+        .er-sum.ok { background: #d1fae5; color: #065f46; }
+        .er-sum.ko { background: #fee2e2; color: #991b1b; }
+        @media (max-width: 640px) {
+            .er-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) 36px; gap: 6px; }
+            .er-row input { padding: 8px 6px; font-size: 0.9rem; min-width: 0; }
+            .er-row .delete-btn { padding: 4px; width: 36px; }
+            .er-row .er-n { grid-column: 1 / -1; }
+        }
+
         .rate-summary {
             display: flex;
             justify-content: space-between;
@@ -1577,6 +1591,15 @@
                         <button class="btn btn-secondary btn-small" id="manageMethodsEditBtn" style="margin-top: 0; padding: 10px 14px; width: auto;" title="Gestisci tipi di pagamento">⚙️</button>
                     </div>
                 </div>
+                <div id="editRatesSection" class="rate-section" style="display: none;">
+                    <div style="font-weight: 600; margin-bottom: 10px;">📅 Rate</div>
+                    <div id="editRatesList"></div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary btn-small" id="editAddRateBtn" style="margin: 0;">+ Aggiungi rata</button>
+                        <button type="button" class="btn btn-secondary btn-small" id="editResetRatesBtn" style="margin: 0;">↩️ Ripristina rate originali</button>
+                    </div>
+                    <div id="editRatesSummary" class="er-sum ok"></div>
+                </div>
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <button class="btn btn-success" id="saveEditBtn">💾 Salva modifiche</button>
                     <button class="btn btn-secondary" id="cancelEditBtn" style="margin-top: 8px;">Annulla</button>
@@ -2637,37 +2660,82 @@
         // ============================================================
         // MODIFICA MOVIMENTO
         // ============================================================
+        // Copia di lavoro delle rate della spesa che si sta modificando
+        let editRates = [];
+        let editRatesOriginal = [];
+        let editIsInstallment = false;
+
+        function editRatesDiff() {
+            const total = roundToCents(parseFloat(editAmount.value) || 0);
+            const sum = roundToCents(editRates.reduce((a, r) => a + (Number(r.amount) || 0), 0));
+            return { total: total, sum: sum, diff: roundToCents(total - sum) };
+        }
+
+        function updateEditRatesSummary() {
+            const box = document.getElementById('editRatesSummary');
+            const d = editRatesDiff();
+            const ok = Math.abs(d.diff) < 0.005;
+            box.className = 'er-sum ' + (ok ? 'ok' : 'ko');
+            box.innerHTML = `<span>Totale rate: ${formatCurrency(d.sum)} su ${formatCurrency(d.total)}</span>`
+                + `<span>${ok ? '✅ Differenza: 0,00 €' : '⚠️ Differenza: ' + formatCurrency(d.diff)}</span>`;
+            saveEditBtn.style.opacity = ok ? '1' : '0.55';
+        }
+
+        function renderEditRates() {
+            const list = document.getElementById('editRatesList');
+            const today = getToday();
+            list.innerHTML = '';
+            editRates.forEach((r, i) => {
+                const paid = r.date && r.date <= today;
+                const row = document.createElement('div');
+                row.className = 'er-row';
+                row.innerHTML = `
+                    <span class="er-n">Rata ${i + 1}<small style="color:${paid ? '#2563eb' : '#dc2626'};">${paid ? '✅ pagata' : '⏳ da pagare'}</small></span>
+                    <input type="number" step="0.01" min="0" data-i="${i}" data-f="amount" value="${(Number(r.amount) || 0).toFixed(2)}" aria-label="Importo rata ${i + 1}">
+                    <input type="date" data-i="${i}" data-f="date" value="${escapeHtml(r.date || '')}" aria-label="Data rata ${i + 1}">
+                    <button type="button" class="delete-btn" data-i="${i}" title="Elimina rata" ${editRates.length <= 1 ? 'disabled style="opacity:0.3"' : ''}>✕</button>
+                `;
+                list.appendChild(row);
+            });
+            updateEditRatesSummary();
+        }
+
         function openEditModal(transactionId) {
             const t = transactions.find(x => x.id === transactionId);
             if (!t) return;
 
             editingTransactionId = transactionId;
             const inst = isInstallment(t);
+            editIsInstallment = inst;
 
-            // Una spesa a rate non può cambiare tipo/importo (le rate resterebbero incoerenti);
-            // un movimento normale non può diventare "a rate" da qui (non avrebbe rate).
+            // Una spesa a rate non può cambiare tipo; un movimento normale non può diventare "a rate" da qui.
             const instOption = editType.querySelector('option[value="installment"]');
             if (instOption) instOption.disabled = !inst;
             editType.value = t.type;
             editType.disabled = inst;
-            editAmount.disabled = inst;
+            editAmount.disabled = false;
 
             editDesc.value = t.desc || '';
-            editAmount.value = t.amount || 0;
+            editAmount.value = (Number(t.amount) || 0).toFixed(2);
             editDate.value = t.date || '';
             editCategory.value = t.category || '';
             editMethod.value = PAYMENT_METHODS[t.method] ? t.method : '';
 
-            let note = document.getElementById('editInstallmentNote');
-            if (!note) {
-                const form = document.getElementById('editForm');
-                note = document.createElement('div');
-                note.id = 'editInstallmentNote';
-                note.className = 'text-muted mt-1';
-                note.textContent = 'ℹ️ Per una spesa a rate puoi modificare descrizione, data e categoria. Per cambiare importo o rate, elimina il movimento e reinseriscilo.';
-                form.insertBefore(note, form.lastElementChild);
+            const old = document.getElementById('editInstallmentNote');
+            if (old) old.remove();
+
+            const section = document.getElementById('editRatesSection');
+            if (inst) {
+                editRatesOriginal = numberedRates(t).map(r => ({ amount: r.amount, date: r.date }));
+                editRates = editRatesOriginal.map(r => ({ ...r }));
+                renderEditRates();
+                section.style.display = 'block';
+            } else {
+                editRates = [];
+                editRatesOriginal = [];
+                section.style.display = 'none';
+                saveEditBtn.style.opacity = '1';
             }
-            note.style.display = inst ? 'block' : 'none';
 
             editModal.style.display = 'flex';
         }
@@ -2675,6 +2743,25 @@
         function closeEditModalHandler() {
             editModal.style.display = 'none';
             editingTransactionId = null;
+            editIsInstallment = false;
+            saveEditBtn.style.opacity = '1';
+        }
+
+        // Uscita senza salvare (✕, Annulla, clic fuori): per una spesa a rate
+        // non si può uscire finché la differenza con il totale non è zero
+        function requestCloseEdit() {
+            if (editIsInstallment) {
+                const d = editRatesDiff();
+                if (Math.abs(d.diff) >= 0.005) {
+                    alert(`Non puoi uscire: la somma delle rate (${formatCurrency(d.sum)}) non corrisponde all'importo totale (${formatCurrency(d.total)}).\n\nDifferenza: ${formatCurrency(d.diff)}.\n\nCorreggi le rate o l'importo totale, oppure premi "Ripristina rate originali".`);
+                    return;
+                }
+                const t = transactions.find(x => x.id === editingTransactionId);
+                const changed = JSON.stringify(editRates) !== JSON.stringify(editRatesOriginal) ||
+                    (t && roundToCents(parseFloat(editAmount.value) || 0) !== roundToCents(Number(t.amount) || 0));
+                if (changed && !confirm('Le modifiche alle rate non sono state salvate. Uscire senza salvarle?')) return;
+            }
+            closeEditModalHandler();
         }
 
         async function saveEditTransaction() {
@@ -2688,7 +2775,7 @@
 
             const type = inst ? original.type : editType.value;
             const desc = editDesc.value.trim();
-            const amount = inst ? Number(original.amount) : parseFloat(editAmount.value);
+            const amount = parseFloat(editAmount.value);
             const date = editDate.value;
             const category = editCategory.value || '';
 
@@ -2700,6 +2787,23 @@
                 return;
             }
 
+            let newRates = null;
+            if (inst) {
+                for (let i = 0; i < editRates.length; i++) {
+                    const r = editRates[i];
+                    if (!(Number(r.amount) > 0)) { alert(`Inserisci un importo valido per la rata ${i + 1}.`); return; }
+                    if (!r.date) { alert(`Inserisci la data della rata ${i + 1}.`); return; }
+                }
+                const d = editRatesDiff();
+                if (Math.abs(d.diff) >= 0.005) {
+                    alert(`La somma delle rate (${formatCurrency(d.sum)}) non corrisponde all'importo totale (${formatCurrency(d.total)}).\n\nDifferenza: ${formatCurrency(d.diff)}. Correggi le rate prima di salvare.`);
+                    return;
+                }
+                newRates = editRates
+                    .map(r => ({ amount: roundToCents(Number(r.amount)), date: r.date }))
+                    .sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
+            }
+
             const updated = {
                 ...original,
                 type: type,
@@ -2707,9 +2811,9 @@
                 amount: roundToCents(amount),
                 date: date,
                 category: category,
-                method: editMethod.value || ''
+                method: editMethod.value || '',
+                rates: inst ? newRates : null
             };
-            if (!inst) updated.rates = null;
             transactions[index] = updated;
 
             closeEditModalHandler();
@@ -4561,11 +4665,50 @@
         });
 
         // Modifica movimento
-        closeEditModal.addEventListener('click', closeEditModalHandler);
-        cancelEditBtn.addEventListener('click', closeEditModalHandler);
+        closeEditModal.addEventListener('click', requestCloseEdit);
+        cancelEditBtn.addEventListener('click', requestCloseEdit);
+
+        // Rate nella finestra di modifica
+        const editRatesList = document.getElementById('editRatesList');
+        editRatesList.addEventListener('input', function(e) {
+            const el = e.target;
+            if (!el.dataset || el.dataset.i === undefined) return;
+            const r = editRates[parseInt(el.dataset.i, 10)];
+            if (!r) return;
+            if (el.dataset.f === 'amount') r.amount = roundToCents(parseFloat(el.value) || 0);
+            if (el.dataset.f === 'date') r.date = el.value;
+            updateEditRatesSummary();
+        });
+        editRatesList.addEventListener('change', function(e) {
+            if (e.target.dataset && e.target.dataset.f === 'date') renderEditRates();   // aggiorna "pagata / da pagare"
+        });
+        editRatesList.addEventListener('click', function(e) {
+            const btn = e.target.closest('.delete-btn');
+            if (!btn || editRates.length <= 1) return;
+            editRates.splice(parseInt(btn.dataset.i, 10), 1);
+            renderEditRates();
+        });
+        editAmount.addEventListener('input', function() {
+            if (editIsInstallment) updateEditRatesSummary();
+        });
+        document.getElementById('editAddRateBtn').addEventListener('click', function() {
+            const last = editRates[editRates.length - 1];
+            const d = editRatesDiff();
+            editRates.push({
+                amount: d.diff > 0 ? d.diff : 0,
+                date: last && last.date ? addMonthsKeepingDay(last.date, 1) : getToday()
+            });
+            renderEditRates();
+        });
+        document.getElementById('editResetRatesBtn').addEventListener('click', function() {
+            const t = transactions.find(x => x.id === editingTransactionId);
+            if (t) editAmount.value = (Number(t.amount) || 0).toFixed(2);
+            editRates = editRatesOriginal.map(r => ({ ...r }));
+            renderEditRates();
+        });
         saveEditBtn.addEventListener('click', saveEditTransaction);
         editModal.addEventListener('click', function(e) {
-            if (e.target === this) closeEditModalHandler();
+            if (e.target === this) requestCloseEdit();
         });
 
         document.querySelectorAll('#editForm input, #editForm select').forEach(el => {
